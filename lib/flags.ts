@@ -1,12 +1,12 @@
 // Maps football-data.org 3-letter codes → ISO 3166-1 alpha-2 for flagcdn.com
 const FIFA_TO_ISO: Record<string, string> = {
   // South America
-  ARG: "ar", BRA: "br", COL: "co", URU: "uy", ECU: "ec",
+  ARG: "ar", BRA: "br", COL: "co", URU: "uy", URY: "uy", ECU: "ec",
   CHI: "cl", PAR: "py", BOL: "bo", PER: "pe", VEN: "ve",
   // North/Central America & Caribbean
   USA: "us", MEX: "mx", CAN: "ca", PAN: "pa", HON: "hn",
   JAM: "jm", CRC: "cr", GTM: "gt", TRI: "tt", CUB: "cu",
-  SLV: "sv", NCA: "ni",
+  SLV: "sv", NCA: "ni", HAI: "ht", CUW: "cw",
   // Europe
   ENG: "gb-eng", ESP: "es", FRA: "fr", GER: "de", POR: "pt",
   NED: "nl", BEL: "be", CRO: "hr", SUI: "ch", AUT: "at",
@@ -15,13 +15,16 @@ const FIFA_TO_ISO: Record<string, string> = {
   ROU: "ro", UKR: "ua", GRE: "gr", NOR: "no", ISL: "is",
   WAL: "gb-wls", IRL: "ie", FIN: "fi", ITA: "it",
   GEO: "ge", MKD: "mk", MNE: "me", BIH: "ba", LUX: "lu",
+  // Europe (extra)
+  SWE: "se",
   // Africa
   MAR: "ma", SEN: "sn", EGY: "eg", NGA: "ng", CMR: "cm",
   MLI: "ml", ALG: "dz", TUN: "tn", GHA: "gh", CIV: "ci",
   COM: "km", BEN: "bj", TAN: "tz", GAB: "ga", ZAM: "zm",
   CPV: "cv", GUI: "gn", MOZ: "mz", ZIM: "zw",
+  COD: "cd", RSA: "za",
   // Asia
-  JPN: "jp", KOR: "kr", AUS: "au", IRN: "ir", SAU: "sa",
+  JPN: "jp", KOR: "kr", AUS: "au", IRN: "ir", SAU: "sa", KSA: "sa",
   QAT: "qa", IDN: "id", UZB: "uz", IRQ: "iq", JOR: "jo",
   UAE: "ae", OMN: "om", BHR: "bh", KUW: "kw", CHN: "cn",
   TJK: "tj",
