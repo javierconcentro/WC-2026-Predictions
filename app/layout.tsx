@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import TabNav from "@/components/TabNav";
-import Logo from "@/components/Logo";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
@@ -22,11 +21,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${jakarta.className} min-h-screen antialiased`}>
         <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2.5">
-              <Logo />
-              <span className="text-xl font-bold lowercase tracking-tight text-[#101828]">
-                concentro
-              </span>
+            <div className="flex items-center">
+              <img src="/Concentro-Logo/concentro-logo_navy.png" alt="Concentro" className="h-8 w-auto" />
             </div>
             <span className="rounded-full bg-[#101828] px-3 py-1 text-xs font-semibold text-white">
               ⚽ WC 2026

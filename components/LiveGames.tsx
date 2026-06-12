@@ -12,6 +12,15 @@ interface Feed {
   teams: Team[];
 }
 
+function liveMinute(kickoffUtc: string): string {
+  const elapsed = Math.floor((Date.now() - new Date(kickoffUtc).getTime()) / 60_000);
+  if (elapsed <= 0) return "";
+  if (elapsed <= 47) return ` '${elapsed}`;     // 1st half (incl. stoppage)
+  if (elapsed <= 62) return " HT";              // halftime break (~15 min)
+  const m = 45 + (elapsed - 62);
+  return ` '${Math.min(m, 90)}`;               // 2nd half, cap at 90'
+}
+
 const STAGE_LABEL: Record<string, string> = {
   group: "Group",
   R32: "Round of 32",
@@ -112,7 +121,7 @@ export default function LiveGames() {
                 </span>
                 <span>
                   {f.status === "live" ? (
-                    <span className="font-semibold text-emerald-600">● LIVE</span>
+                    <span className="font-semibold text-emerald-600">● LIVE{liveMinute(f.kickoff_utc)}</span>
                   ) : f.status === "finished" ? (
                     "FT"
                   ) : (
