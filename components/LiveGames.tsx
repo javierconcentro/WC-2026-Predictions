@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Fixture, StandingRow, Team } from "@/lib/types";
-import { teamFlag } from "@/lib/flags";
+import { flagUrl } from "@/lib/flags";
 
 const POLL_MS = 45_000;
 
@@ -76,9 +76,12 @@ export default function LiveGames() {
     const fallback = side === "home" ? f.home_team_name : f.away_team_name;
     return (id && teamById.get(id)?.name) || fallback || "TBD";
   };
-  const flag = (f: Fixture, side: "home" | "away") => {
+  const getFlag = (f: Fixture, side: "home" | "away") => {
     const id = side === "home" ? f.home_team_id : f.away_team_id;
-    return id ? teamFlag(teamById.get(id)?.code) : "";
+    const fallbackName = side === "home" ? f.home_team_name : f.away_team_name;
+    if (!id) return null;
+    const team = teamById.get(id);
+    return flagUrl(team?.code, team?.name ?? fallbackName);
   };
 
   // Anchor: first live game, else first scheduled game.
@@ -123,17 +126,21 @@ export default function LiveGames() {
                   )}
                 </span>
               </div>
-              <div className="mt-1 flex items-center justify-between">
-                <span className={`flex-1 flex items-center gap-1.5 text-sm font-medium ${f.status === "scheduled" ? "text-slate-600" : ""}`}>
-                  <span className="text-base leading-none">{flag(f, "home")}</span>
-                  {name(f, "home")}
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className={`flex-1 flex items-center gap-1.5 min-w-0 text-sm font-medium ${f.status === "scheduled" ? "text-slate-600" : ""}`}>
+                  {getFlag(f, "home") && (
+                    <img src={getFlag(f, "home")!} alt="" className="h-3.5 w-auto rounded-[2px] shrink-0" />
+                  )}
+                  <span className="truncate">{name(f, "home")}</span>
                 </span>
-                <span className="px-3 font-bold tabular-nums">
+                <span className="shrink-0 px-2 font-bold tabular-nums">
                   {f.status === "scheduled" ? "vs" : `${f.home_score ?? 0} – ${f.away_score ?? 0}`}
                 </span>
-                <span className={`flex-1 flex items-center justify-end gap-1.5 text-right text-sm font-medium ${f.status === "scheduled" ? "text-slate-600" : ""}`}>
-                  {name(f, "away")}
-                  <span className="text-base leading-none">{flag(f, "away")}</span>
+                <span className={`flex-1 flex items-center justify-end gap-1.5 min-w-0 text-sm font-medium ${f.status === "scheduled" ? "text-slate-600" : ""}`}>
+                  <span className="truncate text-right">{name(f, "away")}</span>
+                  {getFlag(f, "away") && (
+                    <img src={getFlag(f, "away")!} alt="" className="h-3.5 w-auto rounded-[2px] shrink-0" />
+                  )}
                 </span>
               </div>
               {f.home_penalties != null && (

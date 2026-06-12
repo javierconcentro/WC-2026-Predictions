@@ -184,7 +184,7 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
               onChange={(v) => updatePart1({ runnerup_team_id: v })}
             />
           </AwardRow>
-          <AwardRow icon="👟" label="Top scorer" pts={20}>
+          <AwardRow icon="⚽" label="Top scorer" pts={20}>
             <PlayerPicker
               label=""
               value={part1.top_scorer_name}

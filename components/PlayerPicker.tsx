@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface Props {
   label: string;
@@ -12,7 +12,26 @@ interface Props {
 }
 
 export default function PlayerPicker({ label, value, disabled, onChange, featured, rest }: Props) {
+  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) setTimeout(() => searchRef.current?.focus(), 40);
+  }, [open]);
 
   const featuredSet = useMemo(() => new Set(featured.map((n) => n.toLowerCase())), [featured]);
   const dedupedRest = useMemo(
@@ -20,114 +39,110 @@ export default function PlayerPicker({ label, value, disabled, onChange, feature
     [rest, featuredSet],
   );
 
-  const searchResults = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return null;
-    return [...featured, ...dedupedRest].filter((n) => n.toLowerCase().includes(q));
-  }, [search, featured, dedupedRest]);
+  const q = search.trim().toLowerCase();
+  const showFeatured = q ? featured.filter((n) => n.toLowerCase().includes(q)) : featured;
+  const showRest = q ? dedupedRest.filter((n) => n.toLowerCase().includes(q)) : dedupedRest;
+
+  const select = (name: string) => {
+    onChange(name);
+    setOpen(false);
+    setSearch("");
+  };
 
   if (disabled) {
     return (
-      <div className="text-sm">
-        <span className="font-medium">{label}</span>
-        <p className="mt-1 text-slate-600">{value || "—"}</p>
-      </div>
+      <>
+        {label && <span className="block mb-1 text-sm font-medium">{label}</span>}
+        <div className="w-full rounded border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-600">
+          {value || "—"}
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="text-sm">
-      <div className="flex items-center justify-between">
-        <span className="font-medium">{label}</span>
-        {value && (
-          <button
-            type="button"
-            onClick={() => onChange("")}
-            className="text-xs text-slate-400 hover:text-red-500"
-          >
-            clear
-          </button>
-        )}
-      </div>
+    <div ref={containerRef} className="relative">
+      {label && <span className="block mb-1 text-sm font-medium">{label}</span>}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm text-left flex items-center justify-between hover:border-slate-400 focus:outline-none focus:border-[#101828]"
+      >
+        <span className={value ? "text-[#101828]" : "text-slate-400"}>
+          {value || "— pick a player —"}
+        </span>
+        <svg
+          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
 
-      {value && (
-        <p className="mt-1 text-xs text-slate-500">
-          Selected:{" "}
-          <span className="font-semibold text-[#101828]">{value}</span>
-        </p>
-      )}
+      {open && (
+        <div className="absolute z-50 left-0 right-0 mt-1 rounded-lg border border-slate-200 bg-white shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-slate-100">
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder="Search players…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:border-[#101828]"
+            />
+          </div>
 
-      <div className="mt-1.5 rounded-lg border border-slate-200 p-3 space-y-2.5">
-        <input
-          type="text"
-          placeholder="Search players…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:border-[#101828]"
-        />
+          <div className="max-h-60 overflow-y-auto">
+            {showFeatured.length === 0 && showRest.length === 0 && (
+              <p className="px-3 py-3 text-sm text-slate-400">No players found.</p>
+            )}
 
-        {searchResults ? (
-          <div className="max-h-48 overflow-y-auto">
-            {searchResults.length === 0 ? (
-              <p className="text-xs text-slate-400 py-1">No players found.</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {searchResults.map((n) => (
-                  <Chip key={n} name={n} selected={value === n} onSelect={() => { onChange(n); setSearch(""); }} />
+            {showFeatured.length > 0 && (
+              <>
+                {!q && (
+                  <p className="px-3 pt-2 pb-0.5 text-xs font-semibold uppercase tracking-wide text-slate-400 select-none">
+                    Top picks
+                  </p>
+                )}
+                {showFeatured.map((n) => (
+                  <button
+                    key={n} type="button" onClick={() => select(n)}
+                    className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-[#e7eaf8] ${
+                      value === n ? "font-semibold text-[#101828] bg-[#e7eaf8]/60" : ""
+                    }`}
+                  >
+                    {n}
+                  </button>
                 ))}
-              </div>
+              </>
+            )}
+
+            {showRest.length > 0 && (
+              <>
+                {!q && showFeatured.length > 0 && <div className="border-t border-slate-100 my-1" />}
+                {showRest.map((n) => (
+                  <button
+                    key={n} type="button" onClick={() => select(n)}
+                    className={`block w-full text-left px-3 py-1.5 text-sm hover:bg-[#e7eaf8] ${
+                      value === n ? "font-semibold text-[#101828] bg-[#e7eaf8]/60" : ""
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </>
             )}
           </div>
-        ) : (
-          <>
-            <div>
-              <p className="text-xs font-medium text-slate-400 mb-1.5">Top picks</p>
-              <div className="flex flex-wrap gap-1.5">
-                {featured.map((n) => (
-                  <Chip key={n} name={n} selected={value === n} onSelect={() => onChange(n)} />
-                ))}
-              </div>
-            </div>
-            {dedupedRest.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-slate-400 mb-1.5">All other players</p>
-                <div className="max-h-44 overflow-y-auto flex flex-wrap gap-1">
-                  {dedupedRest.map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => onChange(n)}
-                      className={`rounded-full border px-2 py-0.5 text-xs transition-colors ${
-                        value === n
-                          ? "border-[#101828] bg-[#101828] text-white"
-                          : "border-slate-200 text-slate-500 hover:border-slate-400"
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
 
-function Chip({ name, selected, onSelect }: { name: string; selected: boolean; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-        selected
-          ? "border-[#101828] bg-[#101828] text-white"
-          : "border-slate-300 text-slate-600 hover:border-[#101828]"
-      }`}
-    >
-      {name}
-    </button>
+          {value && (
+            <div className="border-t border-slate-100 p-2">
+              <button type="button" onClick={() => select("")} className="text-xs text-slate-400 hover:text-red-500">
+                Clear selection
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
