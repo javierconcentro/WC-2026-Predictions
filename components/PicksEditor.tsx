@@ -23,6 +23,8 @@ interface Part1State {
   golden_glove_name: string;
 }
 
+type Tab = "awards" | "groups" | "bracket";
+
 export default function PicksEditor({ playerName, teams, locked, lockAt }: Props) {
   const [part1, setPart1] = useState<Part1State>({
     champion_team_id: null,
@@ -35,9 +37,9 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
   const [rankings, setRankings] = useState<Record<string, number[]>>({});
   const [loaded, setLoaded] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [tab, setTab] = useState<Tab>("awards");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load existing picks
   useEffect(() => {
     (async () => {
       const [p1Res, grRes] = await Promise.all([
@@ -73,7 +75,6 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
     })();
   }, []);
 
-  // Debounced autosave of Part 1
   const savePart1 = useCallback((state: Part1State) => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     setSaveState("saving");
@@ -112,8 +113,15 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
 
   if (!loaded) return <p className="text-sm text-slate-400">Loading your picks…</p>;
 
+  const TABS: { key: Tab; label: string }[] = [
+    { key: "awards", label: "Awards" },
+    { key: "groups", label: "Group Stage" },
+    { key: "bracket", label: "Bracket" },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header row */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold">Hi {playerName} 👋</h2>
@@ -135,100 +143,122 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
                     : "bg-slate-100 text-slate-500"
             }`}
           >
-            {saveState === "saving"
-              ? "Saving…"
-              : saveState === "saved"
-                ? "Saved ✓"
-                : saveState === "error"
-                  ? "Save failed"
-                  : "Auto-save on"}
+            {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved ✓" : saveState === "error" ? "Save failed" : "Auto-save on"}
           </span>
         )}
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Part 1 — Outright picks (80 pts)
-        </h3>
-        <div className="space-y-3">
-          <TeamSelect
-            label="Champion (25 pts)"
-            teams={teamOptions}
-            value={part1.champion_team_id}
-            disabled={locked}
-            onChange={(v) => updatePart1({ champion_team_id: v })}
-          />
-          <TeamSelect
-            label="Runner-up (15 pts)"
-            teams={teamOptions}
-            value={part1.runnerup_team_id}
-            disabled={locked}
-            onChange={(v) => updatePart1({ runnerup_team_id: v })}
-          />
-          <PlayerPicker
-            label="Top scorer (20 pts)"
-            value={part1.top_scorer_name}
-            disabled={locked}
-            featured={SCORER_FEATURED}
-            rest={SCORER_REST}
-            onChange={(name) => updatePart1({ top_scorer_name: name, top_scorer_provider_id: null })}
-          />
-          <PlayerPicker
-            label="Best player / MVP (10 pts)"
-            value={part1.mvp_name}
-            disabled={locked}
-            featured={MVP_FEATURED}
-            rest={MVP_REST}
-            onChange={(name) => updatePart1({ mvp_name: name })}
-          />
-          <PlayerPicker
-            label="Golden glove (10 pts)"
-            value={part1.golden_glove_name}
-            disabled={locked}
-            featured={GK_FEATURED}
-            rest={GK_REST}
-            onChange={(name) => updatePart1({ golden_glove_name: name })}
-          />
-        </div>
-      </section>
+      {/* Tab bar */}
+      <div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+        {TABS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition-colors ${
+              tab === key
+                ? "bg-white text-[#101828] shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Part 2 — Group rankings (84 pts)
-          </h3>
-          <span className="text-xs text-slate-400">
-            {completedGroups}/{groupsWithTeams.length} groups done
-          </span>
+      {/* Awards tab */}
+      {tab === "awards" && (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
+          <AwardRow icon="🏆" label="Champion" pts={25}>
+            <TeamSelect
+              teams={teamOptions}
+              value={part1.champion_team_id}
+              disabled={locked}
+              onChange={(v) => updatePart1({ champion_team_id: v })}
+            />
+          </AwardRow>
+          <AwardRow icon="🥈" label="Runner-up" pts={15}>
+            <TeamSelect
+              teams={teamOptions}
+              value={part1.runnerup_team_id}
+              disabled={locked}
+              onChange={(v) => updatePart1({ runnerup_team_id: v })}
+            />
+          </AwardRow>
+          <AwardRow icon="👟" label="Top scorer" pts={20}>
+            <PlayerPicker
+              label=""
+              value={part1.top_scorer_name}
+              disabled={locked}
+              featured={SCORER_FEATURED}
+              rest={SCORER_REST}
+              onChange={(name) => updatePart1({ top_scorer_name: name, top_scorer_provider_id: null })}
+            />
+          </AwardRow>
+          <AwardRow icon="🌟" label="Best player" pts={10}>
+            <PlayerPicker
+              label=""
+              value={part1.mvp_name}
+              disabled={locked}
+              featured={MVP_FEATURED}
+              rest={MVP_REST}
+              onChange={(name) => updatePart1({ mvp_name: name })}
+            />
+          </AwardRow>
+          <AwardRow icon="🧤" label="Golden glove" pts={10}>
+            <PlayerPicker
+              label=""
+              value={part1.golden_glove_name}
+              disabled={locked}
+              featured={GK_FEATURED}
+              rest={GK_REST}
+              onChange={(name) => updatePart1({ golden_glove_name: name })}
+            />
+          </AwardRow>
         </div>
-        <p className="mb-3 text-xs text-slate-500">
-          Drag each group into your predicted finishing order. Correct 1st = 3, 2nd = 2, 3rd = 1,
-          4th = 1.
-        </p>
-        {groupsWithTeams.length === 0 ? (
-          <p className="text-sm text-slate-400">
-            Teams haven&apos;t been loaded yet — the admin needs to run the first sync.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {groupsWithTeams.map((g) => (
-              <GroupRanker
-                key={g}
-                group={g}
-                teams={teams.filter((t) => t.group_letter === g)}
-                order={rankings[g] ?? null}
-                disabled={locked}
-                onReorder={(ids) => saveGroup(g, ids)}
-              />
-            ))}
+      )}
+
+      {/* Group Stage tab */}
+      {tab === "groups" && (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs text-slate-500">
+              Drag each group into your predicted finishing order. 1st = 3pts, 2nd = 2pts, 3rd/4th = 1pt each.
+            </p>
+            <span className="ml-3 shrink-0 text-xs text-slate-400">
+              {completedGroups}/{groupsWithTeams.length} done
+            </span>
           </div>
-        )}
-      </section>
+          {groupsWithTeams.length === 0 ? (
+            <p className="text-sm text-slate-400">
+              Teams haven&apos;t been loaded yet — the admin needs to run the first sync.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {groupsWithTeams.map((g) => (
+                <GroupRanker
+                  key={g}
+                  group={g}
+                  teams={teams.filter((t) => t.group_letter === g)}
+                  order={rankings[g] ?? null}
+                  disabled={locked}
+                  onReorder={(ids) => saveGroup(g, ids)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-      <section className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-sm text-slate-500">
-        <p className="font-semibold">Part 3 — Knockout bracket (154 pts)</p>
-        <p>Opens when the group stage finishes (~June 27). You&apos;ll pick winners through the final.</p>
-      </section>
+      {/* Bracket tab */}
+      {tab === "bracket" && (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+          <p className="text-2xl mb-2">🔒</p>
+          <p className="font-semibold text-slate-700">Bracket locked</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Opens when the group stage finishes (~June 27). You&apos;ll pick winners through the final and the bronze match.
+          </p>
+        </div>
+      )}
 
       <button
         onClick={async () => {
@@ -243,35 +273,44 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
   );
 }
 
+function AwardRow({ icon, label, pts, children }: { icon: string; label: string; pts: number; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <div className="shrink-0 mt-0.5 text-xl w-7 text-center">{icon}</div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium mb-1">
+          {label} <span className="font-normal text-slate-400 text-xs">({pts} pts)</span>
+        </p>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function TeamSelect({
-  label,
   teams,
   value,
   disabled,
   onChange,
 }: {
-  label: string;
   teams: Team[];
   value: number | null;
   disabled: boolean;
   onChange: (v: number | null) => void;
 }) {
   return (
-    <label className="block text-sm">
-      <span className="font-medium">{label}</span>
-      <select
-        value={value ?? ""}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-        className="mt-1 w-full rounded border border-slate-300 bg-white px-3 py-2 disabled:bg-slate-100"
-      >
-        <option value="">— pick a team —</option>
-        {teams.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name} (Group {t.group_letter})
-          </option>
-        ))}
-      </select>
-    </label>
+    <select
+      value={value ?? ""}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+      className="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100"
+    >
+      <option value="">— pick a team —</option>
+      {teams.map((t) => (
+        <option key={t.id} value={t.id}>
+          {t.name} (Group {t.group_letter})
+        </option>
+      ))}
+    </select>
   );
 }

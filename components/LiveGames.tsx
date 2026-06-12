@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Fixture, StandingRow, Team } from "@/lib/types";
+import { teamFlag } from "@/lib/flags";
 
 const POLL_MS = 45_000;
 
@@ -75,6 +76,10 @@ export default function LiveGames() {
     const fallback = side === "home" ? f.home_team_name : f.away_team_name;
     return (id && teamById.get(id)?.name) || fallback || "TBD";
   };
+  const flag = (f: Fixture, side: "home" | "away") => {
+    const id = side === "home" ? f.home_team_id : f.away_team_id;
+    return id ? teamFlag(teamById.get(id)?.code) : "";
+  };
 
   // Anchor: first live game, else first scheduled game.
   const anchorId =
@@ -119,14 +124,16 @@ export default function LiveGames() {
                 </span>
               </div>
               <div className="mt-1 flex items-center justify-between">
-                <span className={`flex-1 text-sm font-medium ${f.status === "scheduled" ? "text-slate-600" : ""}`}>
+                <span className={`flex-1 flex items-center gap-1.5 text-sm font-medium ${f.status === "scheduled" ? "text-slate-600" : ""}`}>
+                  <span className="text-base leading-none">{flag(f, "home")}</span>
                   {name(f, "home")}
                 </span>
                 <span className="px-3 font-bold tabular-nums">
                   {f.status === "scheduled" ? "vs" : `${f.home_score ?? 0} – ${f.away_score ?? 0}`}
                 </span>
-                <span className={`flex-1 text-right text-sm font-medium ${f.status === "scheduled" ? "text-slate-600" : ""}`}>
+                <span className={`flex-1 flex items-center justify-end gap-1.5 text-right text-sm font-medium ${f.status === "scheduled" ? "text-slate-600" : ""}`}>
                   {name(f, "away")}
+                  <span className="text-base leading-none">{flag(f, "away")}</span>
                 </span>
               </div>
               {f.home_penalties != null && (

@@ -1,19 +1,23 @@
-// Approximation of the Concentro mark: navy squircle, white dot-connector motif
 export default function Logo({ size = 30 }: { size?: number }) {
   return (
     <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true">
-      <rect width="64" height="64" rx="17" fill="#101828" />
+      <rect width="64" height="64" rx="15" fill="#101828" />
+      {/* Two interlocking S-curves — left S and right Z */}
       <path
-        d="M22 17 C22 32 42 32 42 47"
-        stroke="white"
-        strokeWidth="11"
-        strokeLinecap="round"
-        fill="none"
+        d="M 14,12 C 14,25 50,25 50,32 C 50,39 14,47 14,52"
+        stroke="white" strokeWidth="6" strokeLinecap="round" fill="none"
       />
-      <circle cx="42" cy="17" r="5.5" fill="white" />
-      <circle cx="22" cy="47" r="5.5" fill="white" />
-      <circle cx="13" cy="32" r="4.5" fill="white" />
-      <circle cx="51" cy="32" r="4.5" fill="white" />
+      <path
+        d="M 50,12 C 50,25 14,25 14,32 C 14,39 50,47 50,52"
+        stroke="white" strokeWidth="6" strokeLinecap="round" fill="none"
+      />
+      {/* Six nodes: top-left, top-right, mid-right, mid-left, bot-left, bot-right */}
+      <circle cx="14" cy="12" r="5" fill="white" />
+      <circle cx="50" cy="12" r="5" fill="white" />
+      <circle cx="50" cy="32" r="5" fill="white" />
+      <circle cx="14" cy="32" r="5" fill="white" />
+      <circle cx="14" cy="52" r="5" fill="white" />
+      <circle cx="50" cy="52" r="5" fill="white" />
     </svg>
   );
 }
