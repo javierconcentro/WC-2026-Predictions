@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function JoinGate() {
@@ -8,7 +8,15 @@ export default function JoinGate() {
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [existing, setExisting] = useState<string[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/players")
+      .then((r) => r.json())
+      .then((d) => setExisting(d.names ?? []))
+      .catch(() => {});
+  }, []);
 
   const join = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +45,29 @@ export default function JoinGate() {
           them any time until the deadline.
         </p>
       </div>
+      {existing.length > 0 && (
+        <div className="text-sm">
+          <span className="font-medium">Already joined? Tap your name:</span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {existing.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setName(n)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                  name === n
+                    ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                    : "border-slate-300 text-slate-600 hover:border-slate-400"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <label className="block text-sm">
-        <span className="font-medium">Your name</span>
+        <span className="font-medium">{existing.length > 0 ? "Or enter a new name" : "Your name"}</span>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
