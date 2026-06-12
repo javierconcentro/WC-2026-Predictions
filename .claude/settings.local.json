@@ -6,7 +6,8 @@
       "PowerShell(npm --version)",
       "PowerShell($paths = @\\(\"$env:ProgramFiles\\\\nodejs\\\\node.exe\", \"${env:ProgramFiles\\(x86\\)}\\\\nodejs\\\\node.exe\", \"$env:LOCALAPPDATA\\\\Programs\\\\nodejs\\\\node.exe\", \"$env:APPDATA\\\\nvm\", \"$env:LOCALAPPDATA\\\\nvs\", \"$env:USERPROFILE\\\\scoop\\\\apps\\\\nodejs\", \"$env:LOCALAPPDATA\\\\fnm_multishells\"\\); foreach \\($p in $paths\\) { if \\(Test-Path $p\\) { Write-Output \"FOUND: $p\" } }; try { Get-Command winget -ErrorAction Stop | Out-Null; Write-Output \"winget available\" } catch { Write-Output \"no winget\" })",
       "PowerShell($env:Path = \"C:\\\\Program Files\\\\nodejs;$env:Path\"; npm install --no-audit --no-fund)",
-      "PowerShell(curl.exe -s -H \"x-apisports-key: b4f68d26883d69345f762a868a5cd149\" \"https://v3.football.api-sports.io/standings?league=1&season=2026\" -o api_test.json; Get-Content api_test.json -TotalCount 1 | ForEach-Object { $_.Substring\\(0, [Math]::Min\\(600, $_.Length\\)\\) })"
+      "PowerShell(curl.exe -s -H \"x-apisports-key: b4f68d26883d69345f762a868a5cd149\" \"https://v3.football.api-sports.io/standings?league=1&season=2026\" -o api_test.json; Get-Content api_test.json -TotalCount 1 | ForEach-Object { $_.Substring\\(0, [Math]::Min\\(600, $_.Length\\)\\) })",
+      "PowerShell(curl.exe -s -H \"X-Auth-Token: f9e4ba2f746143709d041d36cf0469a6\" \"https://api.football-data.org/v4/competitions/WC/standings\" -o fd_test.json; $raw = Get-Content fd_test.json -Raw; $raw.Substring\\(0, [Math]::Min\\(900, $raw.Length\\)\\))"
     ]
   }
 }

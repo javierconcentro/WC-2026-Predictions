@@ -7,11 +7,19 @@ export async function runSync(): Promise<{ teams: number; fixtures: number; stan
   const provider = getProvider();
   const supabase = db();
 
-  const [teams, fixtures, standings] = await Promise.all([
+  const [teamsRaw, fixturesRaw, standingsRaw] = await Promise.all([
     provider.getTeamsAndGroups(),
     provider.getFixtures(),
     provider.getGroupStandings(),
   ]);
+
+  // Providers can repeat rows (e.g. overall + per-stage standings variants) —
+  // dedupe before upserting or Postgres rejects the batch.
+  const teams = [...new Map(teamsRaw.map((t) => [t.id, t])).values()];
+  const fixtures = [...new Map(fixturesRaw.map((f) => [f.id, f])).values()];
+  const standings = [
+    ...new Map(standingsRaw.map((s) => [`${s.group_letter}-${s.position}`, s])).values(),
+  ];
 
   if (teams.length > 0) {
     const { error } = await supabase.from("teams").upsert(

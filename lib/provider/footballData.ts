@@ -112,17 +112,19 @@ export class FootballDataProvider implements SportsDataProvider {
       if (standing.type && standing.type !== "TOTAL") continue;
       const letter = groupLetter(standing.group);
       if (!letter) continue;
-      for (const row of standing.table ?? []) {
+      // The API reports tied positions (e.g. four teams all "1" before any
+      // games) — use the sorted table order instead, which is always unique.
+      (standing.table ?? []).forEach((row: any, idx: number) => {
         out.push({
           group_letter: letter,
-          position: row.position,
+          position: idx + 1,
           team_id: row.team.id,
           played: row.playedGames ?? 0,
           points: row.points ?? 0,
           goal_diff: row.goalDifference ?? 0,
           goals_for: row.goalsFor ?? 0,
         });
-      }
+      });
     }
     return out;
   }
