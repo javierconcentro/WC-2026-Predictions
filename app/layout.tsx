@@ -3,8 +3,8 @@ import "./globals.css";
 import TabNav from "@/components/TabNav";
 
 export const metadata: Metadata = {
-  title: "WC 2026 Office Pool",
-  description: "World Cup 2026 office prediction pool",
+  title: "Concentro WC 2026",
+  description: "Concentro World Cup 2026 prediction pool",
 };
 
 export const viewport: Viewport = {
@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
             <h1 className="text-lg font-bold tracking-tight">
-              ⚽ WC 2026 <span className="text-emerald-600">Office Pool</span>
+              ⚽ Concentro <span className="text-emerald-600">WC 2026</span>
             </h1>
           </div>
           <TabNav />
