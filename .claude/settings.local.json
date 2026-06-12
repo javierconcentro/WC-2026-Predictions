@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(git init)"
+      "PowerShell(git init)",
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "PowerShell($paths = @\\(\"$env:ProgramFiles\\\\nodejs\\\\node.exe\", \"${env:ProgramFiles\\(x86\\)}\\\\nodejs\\\\node.exe\", \"$env:LOCALAPPDATA\\\\Programs\\\\nodejs\\\\node.exe\", \"$env:APPDATA\\\\nvm\", \"$env:LOCALAPPDATA\\\\nvs\", \"$env:USERPROFILE\\\\scoop\\\\apps\\\\nodejs\", \"$env:LOCALAPPDATA\\\\fnm_multishells\"\\); foreach \\($p in $paths\\) { if \\(Test-Path $p\\) { Write-Output \"FOUND: $p\" } }; try { Get-Command winget -ErrorAction Stop | Out-Null; Write-Output \"winget available\" } catch { Write-Output \"no winget\" })",
+      "PowerShell($env:Path = \"C:\\\\Program Files\\\\nodejs;$env:Path\"; npm install --no-audit --no-fund)"
     ]
   }
 }

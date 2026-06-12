@@ -1,0 +1,172 @@
+import {
+  Actuals,
+  BracketPick,
+  Fixture,
+  GroupRankingRow,
+  Part1Picks,
+  POINTS,
+  StandingRow,
+} from "./types";
+
+// Pure functions over (picks, actuals). Totals are always recomputed on
+// read — never stored (spec §11).
+
+export interface ScoreBreakdown {
+  part1: number;
+  part2: number;
+  part3: number;
+  total: number;
+  championCorrect: boolean;
+  runnerupCorrect: boolean;
+}
+
+function nameMatch(a: string | null, b: string | null): boolean {
+  if (!a || !b) return false;
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+export function scorePart1(picks: Part1Picks | null, actuals: Actuals): {
+  points: number;
+  championCorrect: boolean;
+  runnerupCorrect: boolean;
+} {
+  if (!picks) return { points: 0, championCorrect: false, runnerupCorrect: false };
+  let pts = 0;
+  const championCorrect = Boolean(
+    actuals.champion_team_id && picks.champion_team_id === actuals.champion_team_id
+  );
+  const runnerupCorrect = Boolean(
+    actuals.runnerup_team_id && picks.runnerup_team_id === actuals.runnerup_team_id
+  );
+  if (championCorrect) pts += POINTS.part1.champion;
+  if (runnerupCorrect) pts += POINTS.part1.runnerup;
+
+  const scorerById =
+    actuals.top_scorer_provider_id &&
+    picks.top_scorer_provider_id === actuals.top_scorer_provider_id;
+  if (scorerById || nameMatch(picks.top_scorer_name, actuals.top_scorer_name)) {
+    pts += POINTS.part1.topScorer;
+  }
+  if (nameMatch(picks.mvp_name, actuals.mvp_name)) pts += POINTS.part1.mvp;
+  if (nameMatch(picks.golden_glove_name, actuals.golden_glove_name)) {
+    pts += POINTS.part1.goldenGlove;
+  }
+  return { points: pts, championCorrect, runnerupCorrect };
+}
+
+// A group only scores once all 6 of its matches are finished.
+export function completedGroups(fixtures: Fixture[]): Set<string> {
+  const done = new Set<string>();
+  const byGroup = new Map<string, { total: number; finished: number }>();
+  for (const f of fixtures) {
+    if (f.stage !== "group" || !f.group_letter) continue;
+    const g = byGroup.get(f.group_letter) ?? { total: 0, finished: 0 };
+    g.total += 1;
+    if (f.status === "finished") g.finished += 1;
+    byGroup.set(f.group_letter, g);
+  }
+  for (const [letter, g] of byGroup) {
+    if (g.total >= 6 && g.finished === g.total) done.add(letter);
+  }
+  return done;
+}
+
+export function scorePart2(
+  rankings: GroupRankingRow[],
+  standings: StandingRow[],
+  doneGroups: Set<string>
+): number {
+  const positionPoints = [0, POINTS.part2.pos1, POINTS.part2.pos2, POINTS.part2.pos3, POINTS.part2.pos4];
+  const actualAt = new Map<string, number>(); // `${group}-${position}` -> team_id
+  for (const s of standings) actualAt.set(`${s.group_letter}-${s.position}`, s.team_id);
+
+  let pts = 0;
+  for (const r of rankings) {
+    if (!doneGroups.has(r.group_letter)) continue;
+    if (actualAt.get(`${r.group_letter}-${r.predicted_position}`) === r.team_id) {
+      pts += positionPoints[r.predicted_position] ?? 0;
+    }
+  }
+  return pts;
+}
+
+// Teams that actually reached each knockout round, derived from fixtures.
+// "Reached round R" = appears in a fixture of stage R with a known team id.
+export function actualRoundMembers(fixtures: Fixture[]): Record<"R16" | "QF" | "SF" | "F", Set<number>> {
+  const rounds: Record<"R16" | "QF" | "SF" | "F", Set<number>> = {
+    R16: new Set(),
+    QF: new Set(),
+    SF: new Set(),
+    F: new Set(),
+  };
+  for (const f of fixtures) {
+    if (f.stage === "R16" || f.stage === "QF" || f.stage === "SF" || f.stage === "F") {
+      if (f.home_team_id) rounds[f.stage].add(f.home_team_id);
+      if (f.away_team_id) rounds[f.stage].add(f.away_team_id);
+    }
+  }
+  return rounds;
+}
+
+// Forgiving bracket: a player's "teams advanced to round R" are the winners
+// they picked in the previous round's slots. Path-independent (spec §5).
+export function scorePart3(
+  picks: BracketPick[],
+  bronzeWinnerPick: number | null,
+  fixtures: Fixture[],
+  actuals: Actuals
+): number {
+  if (picks.length === 0 && !bronzeWinnerPick) return 0;
+  const actual = actualRoundMembers(fixtures);
+  const roundPoints: Array<{ prefix: string; reach: keyof typeof actual; pts: number }> = [
+    { prefix: "R32-", reach: "R16", pts: POINTS.part3.reachR16 },
+    { prefix: "R16-", reach: "QF", pts: POINTS.part3.reachQF },
+    { prefix: "QF-", reach: "SF", pts: POINTS.part3.reachSF },
+    { prefix: "SF-", reach: "F", pts: POINTS.part3.reachF },
+  ];
+  let pts = 0;
+  for (const { prefix, reach, pts: per } of roundPoints) {
+    for (const p of picks) {
+      if (p.slot.startsWith(prefix) && actual[reach].has(p.picked_team_id)) pts += per;
+    }
+  }
+  if (
+    bronzeWinnerPick &&
+    actuals.bronze_winner_team_id &&
+    bronzeWinnerPick === actuals.bronze_winner_team_id
+  ) {
+    pts += POINTS.part3.bronze;
+  }
+  return pts;
+}
+
+export function scorePlayer(
+  part1: Part1Picks | null,
+  rankings: GroupRankingRow[],
+  bracket: BracketPick[],
+  bronzePick: number | null,
+  fixtures: Fixture[],
+  standings: StandingRow[],
+  actuals: Actuals
+): ScoreBreakdown {
+  const p1 = scorePart1(part1, actuals);
+  const p2 = scorePart2(rankings, standings, completedGroups(fixtures));
+  const p3 = scorePart3(bracket, bronzePick, fixtures, actuals);
+  return {
+    part1: p1.points,
+    part2: p2,
+    part3: p3,
+    total: p1.points + p2 + p3,
+    championCorrect: p1.championCorrect,
+    runnerupCorrect: p1.runnerupCorrect,
+  };
+}
+
+// Leaderboard sort: total desc, then champion-correct, then runnerup-correct.
+// Players still level after that share a rank (spec §6).
+export function compareForLeaderboard(a: ScoreBreakdown, b: ScoreBreakdown): number {
+  if (b.total !== a.total) return b.total - a.total;
+  if (a.championCorrect !== b.championCorrect) return a.championCorrect ? -1 : 1;
+  if (a.runnerupCorrect !== b.runnerupCorrect) return a.runnerupCorrect ? -1 : 1;
+  return 0;
+}
