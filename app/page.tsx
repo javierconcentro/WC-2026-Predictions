@@ -4,6 +4,7 @@ import { buildLeaderboard } from "@/lib/leaderboard";
 import { getConfig, isAdmin, currentPlayer } from "@/lib/auth";
 import AdminPanel from "@/components/AdminPanel";
 import AdminUnlock from "@/components/AdminUnlock";
+import JoinGate from "@/components/JoinGate";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +18,13 @@ export default async function LeaderboardPage() {
     );
   }
 
-  const [entries, cfg, admin, me] = await Promise.all([
+  const me = await currentPlayer();
+  if (!me) return <JoinGate />;
+
+  const [entries, cfg, admin] = await Promise.all([
     buildLeaderboard(),
     getConfig(),
     isAdmin(),
-    currentPlayer(),
   ]);
 
   return (
