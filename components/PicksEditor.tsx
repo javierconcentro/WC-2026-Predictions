@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Team } from "@/lib/types";
 import { GROUPS } from "@/lib/types";
 import GroupRanker from "./GroupRanker";
-import PlayerTypeahead from "./PlayerTypeahead";
+import PlayerPicker from "./PlayerPicker";
+import { MVP_FEATURED, MVP_REST, SCORER_FEATURED, SCORER_REST, GK_FEATURED, GK_REST } from "@/lib/playerLists";
 
 interface Props {
   playerName: string;
@@ -164,24 +165,28 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
             disabled={locked}
             onChange={(v) => updatePart1({ runnerup_team_id: v })}
           />
-          <PlayerTypeahead
+          <PlayerPicker
             label="Top scorer (20 pts)"
             value={part1.top_scorer_name}
             disabled={locked}
-            onChange={(name, providerId) =>
-              updatePart1({ top_scorer_name: name, top_scorer_provider_id: providerId })
-            }
+            featured={SCORER_FEATURED}
+            rest={SCORER_REST}
+            onChange={(name) => updatePart1({ top_scorer_name: name, top_scorer_provider_id: null })}
           />
-          <PlayerTypeahead
+          <PlayerPicker
             label="Best player / MVP (10 pts)"
             value={part1.mvp_name}
             disabled={locked}
+            featured={MVP_FEATURED}
+            rest={MVP_REST}
             onChange={(name) => updatePart1({ mvp_name: name })}
           />
-          <PlayerTypeahead
+          <PlayerPicker
             label="Golden glove (10 pts)"
             value={part1.golden_glove_name}
             disabled={locked}
+            featured={GK_FEATURED}
+            rest={GK_REST}
             onChange={(name) => updatePart1({ golden_glove_name: name })}
           />
         </div>
