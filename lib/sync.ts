@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { getProvider } from "./provider/apiFootball";
+import { getProvider } from "./provider";
 
 // Idempotent sync: first run seeds teams + fixtures, later runs refresh
 // scores/standings. Fixtures with manual_override=true are never clobbered.
@@ -113,18 +113,25 @@ export async function runSync(): Promise<{ teams: number; fixtures: number; stan
   return { teams: teams.length, fixtures: fixtureRows.length, standings: standings.length };
 }
 
-// Separate from runSync to protect API quota: 48 squad calls, run once
-// from the admin panel.
-export async function loadSquads(): Promise<number> {
+// Separate from runSync to protect API quota. Loads squads in batches of 8
+// (rate limits + serverless timeout) — the admin clicks until remaining = 0.
+export async function loadSquads(): Promise<{ loaded: number; remaining: number }> {
   const supabase = db();
   const { data: teams, error } = await supabase.from("teams").select("id");
   if (error) throw error;
-  const ids = (teams ?? []).map((t) => t.id);
-  if (ids.length === 0) throw new Error("No teams in DB yet — run a sync first.");
-  const players = await getProvider().getSquads(ids);
+  const allIds = (teams ?? []).map((t) => t.id);
+  if (allIds.length === 0) throw new Error("No teams in DB yet — run a sync first.");
+
+  const { data: have } = await supabase.from("squad_players").select("team_id");
+  const covered = new Set((have ?? []).map((r) => r.team_id));
+  const missing = allIds.filter((id) => !covered.has(id));
+  const batch = missing.slice(0, 8);
+  if (batch.length === 0) return { loaded: 0, remaining: 0 };
+
+  const players = await getProvider().getSquads(batch);
   if (players.length > 0) {
     const { error: upErr } = await supabase.from("squad_players").upsert(players);
     if (upErr) throw upErr;
   }
-  return players.length;
+  return { loaded: players.length, remaining: missing.length - batch.length };
 }

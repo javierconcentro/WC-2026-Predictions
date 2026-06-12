@@ -20,7 +20,8 @@ group rankings (3/2/1/1 per group × 12 — 84 pts), and a forgiving knockout br
    - `SUPABASE_SERVICE_ROLE_KEY` — the service_role key
    - `SHARED_PASSCODE` — what the office types to join
    - `ADMIN_PASSCODE` — admin-only passcode
-   - `APIFOOTBALL_KEY` — from dashboard.api-football.com
+   - `FOOTBALLDATA_KEY` — from football-data.org (free tier covers the World Cup; takes priority)
+     — or `APIFOOTBALL_KEY` from dashboard.api-football.com (paid plan required for season 2026)
    - `CRON_SECRET` — any long random string
 3. Deploy → you get `https://<project>.vercel.app`.
 

@@ -55,7 +55,7 @@ export default function AdminPanel() {
           onClick={() => call("Load squads", () => fetch("/api/admin/squads", { method: "POST" }))}
           className="rounded bg-slate-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
-          Load squads (once, 48 API calls)
+          Load squads (click until 0 remaining)
         </button>
       </div>
 

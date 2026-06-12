@@ -142,7 +142,3 @@ export class ApiFootballProvider implements SportsDataProvider {
     return out;
   }
 }
-
-export function getProvider(): SportsDataProvider {
-  return new ApiFootballProvider();
-}
