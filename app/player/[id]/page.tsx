@@ -24,7 +24,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   if (!isMe && !part12Locked(cfg)) {
     return (
       <div className="space-y-3">
-        <Link href="/" className="text-sm text-emerald-700 hover:underline">← Leaderboard</Link>
+        <Link href="/" className="text-sm font-semibold text-[#101828] hover:underline">← Leaderboard</Link>
         <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
           <p className="font-semibold text-slate-700">{player.name}</p>
           <p className="mt-2">Predictions are hidden until picks lock, so nobody can copy. Check back after the deadline!</p>
@@ -57,10 +57,10 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="space-y-5">
-      <Link href="/" className="text-sm text-emerald-700 hover:underline">← Leaderboard</Link>
+      <Link href="/" className="text-sm font-semibold text-[#101828] hover:underline">← Leaderboard</Link>
       <h2 className="text-xl font-bold">{player.name}&apos;s predictions</h2>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Outright picks
         </h3>
@@ -74,7 +74,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         </dl>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Group rankings
         </h3>
@@ -105,7 +105,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         )}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Bracket
         </h3>

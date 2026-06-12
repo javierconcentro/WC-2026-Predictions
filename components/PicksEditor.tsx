@@ -145,7 +145,7 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
         )}
       </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Part 1 — Outright picks (80 pts)
         </h3>
@@ -187,7 +187,7 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
             Part 2 — Group rankings (84 pts)

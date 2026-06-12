@@ -46,7 +46,7 @@ export default function AdminPanel() {
         <button
           disabled={busy}
           onClick={() => call("Sync", () => fetch("/api/sync", { method: "POST" }))}
-          className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded bg-[#101828] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Sync scores now
         </button>

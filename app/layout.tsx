@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import TabNav from "@/components/TabNav";
+import Logo from "@/components/Logo";
+
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Concentro WC 2026",
@@ -15,12 +19,18 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <body className={`${jakarta.className} min-h-screen antialiased`}>
+        <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-            <h1 className="text-lg font-bold tracking-tight">
-              ⚽ Concentro <span className="text-emerald-600">WC 2026</span>
-            </h1>
+            <div className="flex items-center gap-2.5">
+              <Logo />
+              <span className="text-xl font-bold lowercase tracking-tight text-[#101828]">
+                concentro
+              </span>
+            </div>
+            <span className="rounded-full bg-[#101828] px-3 py-1 text-xs font-semibold text-white">
+              ⚽ WC 2026
+            </span>
           </div>
           <TabNav />
         </header>

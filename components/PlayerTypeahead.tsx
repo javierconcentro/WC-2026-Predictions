@@ -69,7 +69,7 @@ export default function PlayerTypeahead({
                   onChange(s.name, s.provider_id);
                   setOpen(false);
                 }}
-                className="w-full px-3 py-2 text-left hover:bg-emerald-50"
+                className="w-full px-3 py-2 text-left hover:bg-[#e7eaf8]"
               >
                 {s.name}
                 {s.position && <span className="ml-2 text-xs text-slate-400">{s.position}</span>}

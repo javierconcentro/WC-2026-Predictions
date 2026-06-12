@@ -1,11 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #e7eaf8;
+  --foreground: #101828;
+  --brand: #101828;
 }
 
 body {
-  background: var(--background);
   color: var(--foreground);
+  background-color: var(--background);
+  /* Subtle staggered dot texture, echoing the Concentro brand pattern */
+  background-image:
+    radial-gradient(circle, rgba(16, 24, 40, 0.035) 8px, transparent 9px),
+    radial-gradient(circle, rgba(16, 24, 40, 0.025) 8px, transparent 9px);
+  background-size: 60px 60px, 60px 60px;
+  background-position: 0 0, 30px 30px;
+  background-attachment: fixed;
 }

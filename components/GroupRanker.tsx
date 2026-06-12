@@ -113,12 +113,12 @@ function SortableTeam({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`flex items-center gap-2 rounded border bg-white px-2 py-1.5 text-sm ${
-        isDragging ? "z-10 border-emerald-400 shadow-md" : "border-slate-200"
+        isDragging ? "z-10 border-[#101828] shadow-md" : "border-slate-200"
       }`}
     >
       <span
         className={`w-5 text-center text-xs font-bold ${
-          position <= 2 ? "text-emerald-600" : "text-slate-400"
+          position <= 2 ? "text-[#101828]" : "text-slate-400"
         }`}
       >
         {position}

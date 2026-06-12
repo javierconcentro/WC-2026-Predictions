@@ -91,10 +91,10 @@ export default function LiveGames() {
           <div key={f.id} ref={isAnchor ? anchorRef : undefined} className="scroll-mt-28">
             <button
               onClick={() => setExpanded(isOpen ? null : f.id)}
-              className={`w-full rounded-lg border bg-white p-3 text-left transition-colors ${
+              className={`w-full rounded-xl border bg-white p-3 text-left shadow-sm transition-colors ${
                 f.status === "live"
-                  ? "border-emerald-400 ring-1 ring-emerald-300"
-                  : "border-slate-200 hover:border-slate-300"
+                  ? "border-emerald-500 ring-1 ring-emerald-400"
+                  : "border-slate-200 hover:border-[#101828]/40"
               }`}
             >
               <div className="flex items-center justify-between text-xs text-slate-400">

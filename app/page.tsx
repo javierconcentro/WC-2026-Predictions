@@ -29,16 +29,16 @@ export default async function LeaderboardPage() {
       {entries.length === 0 ? (
         <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
           Nobody has joined yet. Head to{" "}
-          <Link href="/picks" className="font-medium text-emerald-700 underline">
+          <Link href="/picks" className="font-semibold text-[#101828] underline">
             My Picks
           </Link>{" "}
           to enter your name and start predicting.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr className="border-b border-slate-200 bg-[#101828] text-left text-xs uppercase tracking-wide text-slate-300">
                 <th className="px-3 py-2 w-10">#</th>
                 <th className="px-3 py-2">Player</th>
                 <th className="px-3 py-2 text-right">Part 1</th>
@@ -52,14 +52,14 @@ export default async function LeaderboardPage() {
                 <tr
                   key={e.player.id}
                   className={`border-b border-slate-100 last:border-0 ${
-                    me?.id === e.player.id ? "bg-emerald-50/60" : ""
+                    me?.id === e.player.id ? "bg-[#e7eaf8]/70" : ""
                   }`}
                 >
                   <td className="px-3 py-2.5 font-semibold text-slate-400">{e.rank}</td>
                   <td className="px-3 py-2.5">
                     <Link
                       href={`/player/${e.player.id}`}
-                      className="font-medium text-emerald-700 hover:underline"
+                      className="font-semibold text-[#101828] underline-offset-2 hover:underline"
                     >
                       {e.player.name}
                     </Link>
@@ -79,7 +79,7 @@ export default async function LeaderboardPage() {
         Tap a name to see their full predictions. Ties break on champion, then runner-up.
       </p>
 
-      <p className="rounded-lg bg-emerald-50 px-4 py-2 text-center text-sm font-medium text-emerald-800">
+      <p className="rounded-xl bg-[#101828] px-4 py-2.5 text-center text-sm font-semibold text-white">
         {cfg.payout_text}
       </p>
 

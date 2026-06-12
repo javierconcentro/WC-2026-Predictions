@@ -37,7 +37,7 @@ export default function JoinGate() {
   };
 
   return (
-    <form onSubmit={join} className="mx-auto max-w-sm space-y-4 rounded-lg border border-slate-200 bg-white p-6">
+    <form onSubmit={join} className="mx-auto max-w-sm space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <div>
         <h2 className="text-lg font-bold">Join the pool</h2>
         <p className="text-sm text-slate-500">
@@ -56,7 +56,7 @@ export default function JoinGate() {
                 onClick={() => setName(n)}
                 className={`rounded-full border px-3 py-1 text-xs font-medium ${
                   name === n
-                    ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                    ? "border-[#101828] bg-[#e7eaf8] text-[#101828]"
                     : "border-slate-300 text-slate-600 hover:border-slate-400"
                 }`}
               >
@@ -89,7 +89,7 @@ export default function JoinGate() {
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button
         disabled={busy}
-        className="w-full rounded bg-emerald-600 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+        className="w-full rounded-lg bg-[#101828] py-2.5 font-semibold text-white hover:bg-[#1d2939] disabled:opacity-50"
       >
         {busy ? "Joining…" : "Join"}
       </button>
