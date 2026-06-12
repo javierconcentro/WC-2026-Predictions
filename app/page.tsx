@@ -44,10 +44,10 @@ export default async function LeaderboardPage() {
               <tr className="border-b border-slate-200 bg-[#101828] text-left text-xs uppercase tracking-wide text-slate-300">
                 <th className="px-3 py-2 w-10">#</th>
                 <th className="px-3 py-2">Player</th>
-                <th className="px-3 py-2 text-right">Part 1</th>
-                <th className="px-3 py-2 text-right">Groups</th>
-                <th className="px-3 py-2 text-right">Bracket</th>
                 <th className="px-3 py-2 text-right font-bold">Total</th>
+                <th className="px-3 py-2 text-right">Awards</th>
+                <th className="px-3 py-2 text-right">Group Stage</th>
+                <th className="px-3 py-2 text-right">Bracket</th>
               </tr>
             </thead>
             <tbody>
@@ -67,10 +67,10 @@ export default async function LeaderboardPage() {
                       {e.player.name}
                     </Link>
                   </td>
+                  <td className="px-3 py-2.5 text-right font-bold text-lg">{e.score.total}</td>
                   <td className="px-3 py-2.5 text-right text-slate-500">{e.score.part1}</td>
                   <td className="px-3 py-2.5 text-right text-slate-500">{e.score.part2}</td>
                   <td className="px-3 py-2.5 text-right text-slate-500">{e.score.part3}</td>
-                  <td className="px-3 py-2.5 text-right font-bold">{e.score.total}</td>
                 </tr>
               ))}
             </tbody>
