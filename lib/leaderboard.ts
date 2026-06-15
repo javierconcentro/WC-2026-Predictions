@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { part12Locked } from "./auth";
 import { compareForLeaderboard, ScoreBreakdown, scorePlayer } from "./scoring";
 import type {
   Actuals,
@@ -7,6 +8,7 @@ import type {
   GroupRankingRow,
   Part1Picks,
   Player,
+  PoolConfig,
   StandingRow,
 } from "./types";
 
@@ -18,7 +20,7 @@ export interface LeaderboardEntry {
 
 export async function buildLeaderboard(): Promise<LeaderboardEntry[]> {
   const supabase = db();
-  const [players, part1, rankings, brackets, bronzes, fixtures, standings, actualsRow] =
+  const [players, part1, rankings, brackets, bronzes, fixtures, standings, actualsRow, configRow] =
     await Promise.all([
       supabase.from("players").select("*"),
       supabase.from("part1_picks").select("*"),
@@ -28,11 +30,13 @@ export async function buildLeaderboard(): Promise<LeaderboardEntry[]> {
       supabase.from("fixtures").select("*"),
       supabase.from("standings").select("*"),
       supabase.from("actuals").select("*").eq("id", 1).single(),
+      supabase.from("config").select("*").eq("id", 1).single(),
     ]);
 
   const actuals = (actualsRow.data ?? {}) as Actuals;
   const allFixtures = (fixtures.data ?? []) as Fixture[];
   const allStandings = (standings.data ?? []) as StandingRow[];
+  const locked = configRow.data ? part12Locked(configRow.data as PoolConfig) : false;
 
   const entries = ((players.data ?? []) as Player[]).map((player) => {
     const p1 = ((part1.data ?? []) as Part1Picks[]).find((p) => p.player_id === player.id) ?? null;
@@ -47,7 +51,7 @@ export async function buildLeaderboard(): Promise<LeaderboardEntry[]> {
       null;
     return {
       player,
-      score: scorePlayer(p1, ranks, bracket, bronze, allFixtures, allStandings, actuals),
+      score: scorePlayer(p1, ranks, bracket, bronze, allFixtures, allStandings, actuals, locked),
       rank: 0,
     };
   });

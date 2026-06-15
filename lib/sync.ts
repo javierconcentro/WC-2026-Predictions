@@ -121,6 +121,54 @@ export async function runSync(): Promise<{ teams: number; fixtures: number; stan
   return { teams: teams.length, fixtures: fixtureRows.length, standings: standings.length };
 }
 
+// Lightweight refresh for live matches: pulls ONLY fixtures (1 API call) and
+// updates scores/status. Skips teams/standings/top-scorer/finals so it can run
+// often (on-demand, every ~30s) without blowing the provider's rate limit.
+// Manual overrides are never clobbered.
+export async function runLiveSync(): Promise<{ updated: number }> {
+  const provider = getProvider();
+  const supabase = db();
+
+  const fixturesRaw = await provider.getFixtures();
+  const fixtures = [...new Map(fixturesRaw.map((f) => [f.id, f])).values()];
+
+  const { data: overridden } = await supabase
+    .from("fixtures")
+    .select("id")
+    .eq("manual_override", true);
+  const skip = new Set((overridden ?? []).map((r) => r.id));
+
+  const { data: existingTeams } = await supabase.from("teams").select("id");
+  const teamIds = new Set((existingTeams ?? []).map((r) => r.id));
+
+  const rows = fixtures
+    .filter((f) => !skip.has(f.id))
+    .map((f) => ({
+      id: f.id,
+      stage: f.stage,
+      group_letter: f.group_letter,
+      home_team_id: f.home_team_id && teamIds.has(f.home_team_id) ? f.home_team_id : null,
+      away_team_id: f.away_team_id && teamIds.has(f.away_team_id) ? f.away_team_id : null,
+      home_team_name: f.home_team_name,
+      away_team_name: f.away_team_name,
+      kickoff_utc: f.kickoff_utc,
+      status: f.status,
+      home_score: f.home_score,
+      away_score: f.away_score,
+      home_penalties: f.home_penalties,
+      away_penalties: f.away_penalties,
+      winner_team_id: f.winner_team_id && teamIds.has(f.winner_team_id) ? f.winner_team_id : null,
+      manual_override: false,
+      last_synced_at: new Date().toISOString(),
+    }));
+
+  if (rows.length > 0) {
+    const { error } = await supabase.from("fixtures").upsert(rows);
+    if (error) throw error;
+  }
+  return { updated: rows.length };
+}
+
 // Separate from runSync to protect API quota. Loads squads in batches of 8
 // (rate limits + serverless timeout) — the admin clicks until remaining = 0.
 export async function loadSquads(): Promise<{ loaded: number; remaining: number }> {

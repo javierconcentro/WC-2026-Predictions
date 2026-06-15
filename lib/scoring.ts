@@ -147,18 +147,24 @@ export function scorePlayer(
   bronzePick: number | null,
   fixtures: Fixture[],
   standings: StandingRow[],
-  actuals: Actuals
+  actuals: Actuals,
+  // Parts 1 & 2 stay editable until the lock, so they must not score (and
+  // must not feed tiebreakers) before then — otherwise someone could see a
+  // result and edit their pick. Part 3 has its own lock and is unaffected.
+  part12Locked: boolean
 ): ScoreBreakdown {
   const p1 = scorePart1(part1, actuals);
   const p2 = scorePart2(rankings, standings, completedGroups(fixtures));
   const p3 = scorePart3(bracket, bronzePick, fixtures, actuals);
+  const part1Pts = part12Locked ? p1.points : 0;
+  const part2Pts = part12Locked ? p2 : 0;
   return {
-    part1: p1.points,
-    part2: p2,
+    part1: part1Pts,
+    part2: part2Pts,
     part3: p3,
-    total: p1.points + p2 + p3,
-    championCorrect: p1.championCorrect,
-    runnerupCorrect: p1.runnerupCorrect,
+    total: part1Pts + part2Pts + p3,
+    championCorrect: part12Locked && p1.championCorrect,
+    runnerupCorrect: part12Locked && p1.runnerupCorrect,
   };
 }
 
