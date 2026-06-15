@@ -127,7 +127,7 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
           <h2 className="text-lg font-bold">Hi {playerName} 👋</h2>
           <p className="text-xs text-slate-500">
             {locked
-              ? "Picks are locked — good luck!"
+              ? "Picks are locked — Awards & Group Stage are final, and anything left blank scores 0. Joined late? You can still take part once the bracket opens."
               : `Everything saves automatically. Editable until ${new Date(lockAt).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.`}
           </p>
         </div>
