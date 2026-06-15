@@ -17,6 +17,7 @@ export default function AdminUnlock() {
       body: JSON.stringify({ passcode }),
     });
     if (res.ok) {
+      router.push("/");
       router.refresh();
     } else {
       setError("Wrong passcode.");
@@ -26,8 +27,8 @@ export default function AdminUnlock() {
   if (!open) {
     return (
       <p className="pt-6 text-center">
-        <button onClick={() => setOpen(true)} className="text-xs text-slate-300 hover:text-slate-500">
-          admin
+        <button onClick={() => setOpen(true)} className="text-xs text-slate-400 hover:text-slate-600">
+          Admin log in
         </button>
       </p>
     );

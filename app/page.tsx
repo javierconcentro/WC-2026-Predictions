@@ -18,13 +18,12 @@ export default async function LeaderboardPage() {
     );
   }
 
-  const me = await currentPlayer();
-  if (!me) return <JoinGate />;
+  const [me, admin] = await Promise.all([currentPlayer(), isAdmin()]);
+  if (!me && !admin) return <JoinGate />;
 
-  const [entries, cfg, admin] = await Promise.all([
+  const [entries, cfg] = await Promise.all([
     buildLeaderboard(),
     getConfig(),
-    isAdmin(),
   ]);
 
   return (

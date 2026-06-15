@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import AdminUnlock from "./AdminUnlock";
 
 export default function JoinGate() {
   const [name, setName] = useState("");
@@ -37,7 +38,8 @@ export default function JoinGate() {
   };
 
   return (
-    <form onSubmit={join} className="mx-auto max-w-sm space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="mx-auto max-w-sm">
+    <form onSubmit={join} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <div>
         <h2 className="text-lg font-bold">Join the pool</h2>
         <p className="text-sm text-slate-500">
@@ -94,5 +96,7 @@ export default function JoinGate() {
         {busy ? "Joining…" : "Join"}
       </button>
     </form>
+      <AdminUnlock />
+    </div>
   );
 }
