@@ -6,7 +6,6 @@ import AdminUnlock from "./AdminUnlock";
 
 export default function JoinGate() {
   const [name, setName] = useState("");
-  const [passcode, setPasscode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [existing, setExisting] = useState<string[]>([]);
@@ -26,7 +25,7 @@ export default function JoinGate() {
     const res = await fetch("/api/join", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, passcode }),
+      body: JSON.stringify({ name }),
     });
     setBusy(false);
     if (res.ok) {
@@ -43,7 +42,7 @@ export default function JoinGate() {
       <div>
         <h2 className="text-lg font-bold">Join the pool</h2>
         <p className="text-sm text-slate-500">
-          Enter your name and the office passcode. Your picks save automatically and you can change
+          Enter your name to join. Your picks save automatically and you can change
           them any time until the deadline.
         </p>
       </div>
@@ -75,16 +74,6 @@ export default function JoinGate() {
           onChange={(e) => setName(e.target.value)}
           className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
           placeholder="e.g. Javier"
-          required
-        />
-      </label>
-      <label className="block text-sm">
-        <span className="font-medium">Passcode</span>
-        <input
-          type="password"
-          value={passcode}
-          onChange={(e) => setPasscode(e.target.value)}
-          className="mt-1 w-full rounded border border-slate-300 px-3 py-2"
           required
         />
       </label>
