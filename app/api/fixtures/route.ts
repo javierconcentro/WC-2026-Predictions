@@ -5,7 +5,7 @@ import { runLiveSync } from "@/lib/sync";
 // Don't hit the provider more than once per this window, no matter how many
 // people have the live tab open — protects the free-tier rate limit. The
 // throttle is enforced via fixtures.last_synced_at, which is shared state.
-const LIVE_SYNC_MIN_GAP_MS = 30_000;
+const LIVE_SYNC_MIN_GAP_MS = 20_000;
 
 async function readFeed() {
   const supabase = db();

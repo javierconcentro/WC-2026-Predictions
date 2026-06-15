@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Fixture, StandingRow, Team } from "@/lib/types";
 import { flagUrl } from "@/lib/flags";
 
-const POLL_MS = 45_000;
+const POLL_MS = 30_000;
 
 interface Feed {
   fixtures: Fixture[];

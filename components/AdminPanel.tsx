@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Fixture, Team } from "@/lib/types";
+import type { Fixture, PoolConfig, Team } from "@/lib/types";
 
-export default function AdminPanel() {
+export default function AdminPanel({ config }: { config: PoolConfig }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
@@ -61,7 +61,7 @@ export default function AdminPanel() {
 
       <FixtureOverride fixtures={fixtures} teamName={teamName} onSubmit={call} />
       <AwardsForm onSubmit={call} />
-      <ConfigForm onSubmit={call} />
+      <ConfigForm onSubmit={call} config={config} />
     </section>
   );
 }
@@ -214,18 +214,55 @@ function AwardsForm({
   );
 }
 
+// ISO (UTC) -> value a <input type="datetime-local"> expects, in local time.
+function toLocalInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function ConfigForm({
   onSubmit,
+  config,
 }: {
   onSubmit: (label: string, fn: () => Promise<Response>) => void;
+  config: PoolConfig;
 }) {
-  const [lockAt, setLockAt] = useState("");
-  const [payout, setPayout] = useState("");
+  // Pre-fill with the saved values so it's obvious what's currently set.
+  const [lockAt, setLockAt] = useState(toLocalInput(config.lock_part12_at));
+  const [payout, setPayout] = useState(config.payout_text ?? "");
+
+  const lockPassed = config.lock_part12_at
+    ? Date.now() >= new Date(config.lock_part12_at).getTime()
+    : false;
 
   return (
     <details className="rounded border border-slate-200 p-3">
       <summary className="cursor-pointer text-sm font-semibold">Deadlines & payout text</summary>
-      <div className="mt-3 space-y-2 text-sm">
+      <div className="mt-3 space-y-3 text-sm">
+        <div className="rounded bg-slate-50 px-3 py-2 text-xs">
+          <p>
+            <span className="text-slate-500">Picks lock currently set to:</span>{" "}
+            <span className="font-semibold">
+              {config.lock_part12_at
+                ? new Date(config.lock_part12_at).toLocaleString(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })
+                : "not set"}
+            </span>
+          </p>
+          <p className="mt-0.5 text-slate-500">
+            {lockPassed
+              ? "🔒 Locked — predictions are final and Awards + Group Stage now count."
+              : "🟢 Open — players can still edit, so Awards + Group Stage don't score yet."}
+          </p>
+        </div>
         <label className="block">
           <span className="text-xs text-slate-500">Parts 1+2 lock (your local time)</span>
           <input

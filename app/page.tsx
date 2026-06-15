@@ -85,7 +85,7 @@ export default async function LeaderboardPage() {
         {cfg.payout_text}
       </p>
 
-      {admin ? <AdminPanel /> : <AdminUnlock />}
+      {admin ? <AdminPanel config={cfg} /> : <AdminUnlock />}
     </div>
   );
 }
