@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Team } from "@/lib/types";
 import { GROUPS } from "@/lib/types";
+import type { Matchup } from "@/lib/bracket";
 import GroupRanker from "./GroupRanker";
 import PlayerPicker from "./PlayerPicker";
+import BracketEditor from "./BracketEditor";
 import { MVP_FEATURED, MVP_REST, SCORER_FEATURED, SCORER_REST, GK_FEATURED, GK_REST } from "@/lib/playerLists";
 
 interface Props {
@@ -12,6 +14,9 @@ interface Props {
   teams: Team[];
   locked: boolean;
   lockAt: string;
+  bracketMatchups: Matchup[];
+  bracketOpen: boolean;
+  bracketLocked: boolean;
 }
 
 interface Part1State {
@@ -25,7 +30,7 @@ interface Part1State {
 
 type Tab = "awards" | "groups" | "bracket";
 
-export default function PicksEditor({ playerName, teams, locked, lockAt }: Props) {
+export default function PicksEditor({ playerName, teams, locked, lockAt, bracketMatchups, bracketOpen, bracketLocked }: Props) {
   const [part1, setPart1] = useState<Part1State>({
     champion_team_id: null,
     runnerup_team_id: null,
@@ -250,15 +255,18 @@ export default function PicksEditor({ playerName, teams, locked, lockAt }: Props
       )}
 
       {/* Bracket tab */}
-      {tab === "bracket" && (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-          <p className="text-2xl mb-2">🔒</p>
-          <p className="font-semibold text-slate-700">Bracket locked</p>
-          <p className="mt-1 text-sm text-slate-500">
-            Opens when the group stage finishes (~June 27). You&apos;ll pick winners through the final and the bronze match.
-          </p>
-        </div>
-      )}
+      {tab === "bracket" &&
+        (bracketOpen ? (
+          <BracketEditor matchups={bracketMatchups} teams={teams} locked={bracketLocked} />
+        ) : (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+            <p className="text-2xl mb-2">🔒</p>
+            <p className="font-semibold text-slate-700">Bracket not open yet</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Opens when the group stage finishes (~June 27). You&apos;ll pick winners through the final and the bronze match.
+            </p>
+          </div>
+        ))}
 
       <button
         onClick={async () => {
