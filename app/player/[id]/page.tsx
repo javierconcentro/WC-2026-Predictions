@@ -105,7 +105,10 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   // group-position -> team currently there, for the green "correct" check
   const actualAt = new Map<string, number>();
   for (const s of standings) actualAt.set(`${s.group_letter}-${s.position}`, s.team_id);
+  const actualPosOf = new Map<number, number>(); // team_id -> its current standing position
+  for (const s of standings) actualPosOf.set(s.team_id, s.position);
   const posPoints = [0, POINTS.part2.pos1, POINTS.part2.pos2, POINTS.part2.pos3, POINTS.part2.pos4];
+  const ordinal = (n: number) => (n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
 
   return (
     <div className="space-y-5">
@@ -149,23 +152,31 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               if (groupRanks.length === 0) return null;
               const rows = groupRanks.map((r) => {
                 const correct = locked && actualAt.get(`${g}-${r.predicted_position}`) === r.team_id;
-                return { r, correct, pts: correct ? posPoints[r.predicted_position] ?? 0 : 0 };
+                const actualPos = actualPosOf.get(r.team_id);
+                return {
+                  r,
+                  correct,
+                  actualPos: locked && !correct && actualPos != null ? actualPos : null,
+                  pts: correct ? posPoints[r.predicted_position] ?? 0 : 0,
+                };
               });
               const groupPts = rows.reduce((a, x) => a + x.pts, 0);
               return (
                 <div key={g} className="rounded border border-slate-100 p-2">
                   <div className="mb-1 flex items-center justify-between">
-                    <p className="text-xs font-bold text-slate-400">Group {g}</p>
+                    <p className="text-xs font-bold text-slate-700">Group {g}</p>
                     <span className="text-xs font-semibold text-slate-600">{groupPts} pts</span>
                   </div>
                   <ol className="space-y-0.5 text-xs">
-                    {rows.map(({ r, correct }) => (
-                      <li
-                        key={r.predicted_position}
-                        className={correct ? "font-semibold text-emerald-600" : ""}
-                      >
-                        <span className="text-slate-400">{r.predicted_position}.</span>{" "}
-                        {teamName(r.team_id)}
+                    {rows.map(({ r, correct, actualPos }) => (
+                      <li key={r.predicted_position} className="flex items-center gap-1">
+                        <span className="font-bold text-slate-500">{r.predicted_position}.</span>
+                        <span className={correct ? "font-semibold text-emerald-600" : "font-medium"}>
+                          {teamName(r.team_id)}
+                        </span>
+                        {actualPos != null && (
+                          <span className="font-semibold text-red-500">({ordinal(actualPos)})</span>
+                        )}
                       </li>
                     ))}
                   </ol>
