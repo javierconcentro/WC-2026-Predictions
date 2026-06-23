@@ -108,7 +108,6 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const actualPosOf = new Map<number, number>(); // team_id -> its current standing position
   for (const s of standings) actualPosOf.set(s.team_id, s.position);
   const posPoints = [0, POINTS.part2.pos1, POINTS.part2.pos2, POINTS.part2.pos3, POINTS.part2.pos4];
-  const ordinal = (n: number) => (n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
 
   return (
     <div className="space-y-5">
@@ -175,7 +174,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
                           {teamName(r.team_id)}
                         </span>
                         {actualPos != null && (
-                          <span className="font-semibold text-red-500">({ordinal(actualPos)})</span>
+                          <span className="text-[10px] font-normal text-red-400">({actualPos})</span>
                         )}
                       </li>
                     ))}
