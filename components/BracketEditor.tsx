@@ -24,7 +24,7 @@ const SCORING_ROUNDS = [
 
 const PREV: Record<string, string> = { R16: "R32", QF: "R16", SF: "QF" };
 const LABEL: Record<string, string> = { R32: "R32", R16: "R16", QF: "QF", SF: "Semis" };
-const BOX_W = 120; // compact; still fits "United States", whole bracket fits without scrolling
+const BOX_W = 150; // comfortably fits "United States" with room to spare
 const SHORT_NAME: Record<string, string> = {
   "Cape Verde Islands": "Cape Verde",
   "Bosnia-Herzegovina": "Bosnia",
@@ -196,7 +196,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
       {/* Full-bleed: break out of the page's max-width so the bracket uses the
           whole viewport. Scrolls horizontally when it's wider than the screen. */}
       <div className="relative left-1/2 w-screen -translate-x-1/2 overflow-x-auto px-4 pb-2">
-        <div className="mx-auto flex w-max items-stretch gap-2">
+        <div className="mx-auto flex w-max items-stretch gap-4">
           {column("R32", "left")}
           {column("R16", "left")}
           {column("QF", "left")}
@@ -287,7 +287,7 @@ function MatchBox({
           disabled={locked || !id}
           title={id ? nameOf(id) : undefined}
           onClick={() => onPick(id)}
-          className={`flex w-full items-center gap-1 px-1 py-1.5 text-left text-xs leading-tight ${
+          className={`flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs leading-tight ${
             idx === 0 ? "border-b border-slate-100" : ""
           } ${rowClass(id)}`}
         >
