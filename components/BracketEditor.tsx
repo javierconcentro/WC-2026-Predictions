@@ -24,7 +24,7 @@ const SCORING_ROUNDS = [
 
 const PREV: Record<string, string> = { R16: "R32", QF: "R16", SF: "QF" };
 const LABEL: Record<string, string> = { R32: "R32", R16: "R16", QF: "QF", SF: "Semis" };
-const BOX_W = 132; // ~ width of "United States", so the whole bracket fits without scrolling
+const BOX_W = 124; // ~ width of "United States", so the whole bracket fits without scrolling
 const SHORT_NAME: Record<string, string> = {
   "Cape Verde Islands": "Cape Verde",
   "Bosnia-Herzegovina": "Bosnia",
