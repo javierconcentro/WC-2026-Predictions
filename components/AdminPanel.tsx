@@ -232,10 +232,18 @@ function ConfigForm({
 }) {
   // Pre-fill with the saved values so it's obvious what's currently set.
   const [lockAt, setLockAt] = useState(toLocalInput(config.lock_part12_at));
+  const [bracketOpenAt, setBracketOpenAt] = useState(toLocalInput(config.bracket_open_at));
+  const [bracketLockAt, setBracketLockAt] = useState(toLocalInput(config.bracket_lock_at));
   const [payout, setPayout] = useState(config.payout_text ?? "");
 
   const lockPassed = config.lock_part12_at
     ? Date.now() >= new Date(config.lock_part12_at).getTime()
+    : false;
+  const bracketIsOpen = config.bracket_open_at
+    ? Date.now() >= new Date(config.bracket_open_at).getTime()
+    : false;
+  const bracketIsLocked = config.bracket_lock_at
+    ? Date.now() >= new Date(config.bracket_lock_at).getTime()
     : false;
 
   return (
@@ -272,6 +280,28 @@ function ConfigForm({
             className="mt-0.5 w-full rounded border border-slate-300 px-2 py-1.5"
           />
         </label>
+        <div className="rounded bg-slate-50 px-3 py-2 text-xs text-slate-500">
+          Bracket: {bracketIsOpen ? "🟢 open" : "⚪ not open yet"}
+          {bracketIsLocked ? " · 🔒 locked" : " · ✏️ editable"}
+        </div>
+        <label className="block">
+          <span className="text-xs text-slate-500">Bracket opens (your local time)</span>
+          <input
+            type="datetime-local"
+            value={bracketOpenAt}
+            onChange={(e) => setBracketOpenAt(e.target.value)}
+            className="mt-0.5 w-full rounded border border-slate-300 px-2 py-1.5"
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs text-slate-500">Bracket lock (set to now to lock it)</span>
+          <input
+            type="datetime-local"
+            value={bracketLockAt}
+            onChange={(e) => setBracketLockAt(e.target.value)}
+            className="mt-0.5 w-full rounded border border-slate-300 px-2 py-1.5"
+          />
+        </label>
         <label className="block">
           <span className="text-xs text-slate-500">Payout line</span>
           <input
@@ -289,6 +319,8 @@ function ConfigForm({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   ...(lockAt ? { lock_part12_at: new Date(lockAt).toISOString() } : {}),
+                  ...(bracketOpenAt ? { bracket_open_at: new Date(bracketOpenAt).toISOString() } : {}),
+                  ...(bracketLockAt ? { bracket_lock_at: new Date(bracketLockAt).toISOString() } : {}),
                   ...(payout ? { payout_text: payout } : {}),
                 }),
               })
