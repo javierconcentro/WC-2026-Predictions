@@ -24,7 +24,7 @@ const SCORING_ROUNDS = [
 
 const PREV: Record<string, string> = { R16: "R32", QF: "R16", SF: "QF" };
 const LABEL: Record<string, string> = { R32: "R32", R16: "R16", QF: "QF", SF: "Semis" };
-const BOX_W = 116;
+const BOX_W = 176; // fixed, wide enough for long names e.g. "Cape Verde Islands"
 
 export default function BracketEditor({ matchups, teams, locked }: Props) {
   const [picks, setPicks] = useState<Picks>({});
@@ -183,8 +183,10 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
         )}
       </div>
 
-      <div className="overflow-x-auto pb-2">
-        <div className="flex min-w-max items-stretch gap-1.5">
+      {/* Full-bleed: break out of the page's max-width so the bracket uses the
+          whole viewport. Scrolls horizontally when it's wider than the screen. */}
+      <div className="relative left-1/2 w-screen -translate-x-1/2 overflow-x-auto px-4 pb-2">
+        <div className="mx-auto flex w-max items-stretch gap-2">
           {column("R32", "left")}
           {column("R16", "left")}
           {column("QF", "left")}
@@ -269,7 +271,7 @@ function MatchBox({
             disabled={!pickable}
             title={id ? nameOf(id) : undefined}
             onClick={() => onPick(id)}
-            className={`flex w-full items-center gap-1 px-1.5 py-1 text-left text-[11px] leading-tight ${
+            className={`flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs leading-tight ${
               idx === 0 ? "border-b border-slate-100" : ""
             } ${selected ? selClass : id ? "hover:bg-slate-50" : "text-slate-300"}`}
           >
@@ -296,5 +298,5 @@ function Flag({
   const t = teamMeta.get(id);
   const url = flagUrl(t?.code, t?.name ?? nameOf(id));
   if (!url) return null;
-  return <img src={url} alt="" className="h-2.5 w-auto shrink-0 rounded-[1px]" />;
+  return <img src={url} alt="" className="h-3 w-auto shrink-0 rounded-[1px]" />;
 }
