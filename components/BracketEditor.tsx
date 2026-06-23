@@ -23,6 +23,7 @@ const SCORING_ROUNDS = [
 ] as const;
 
 const PREV: Record<string, string> = { R16: "R32", QF: "R16", SF: "QF" };
+const NEXT: Record<string, string> = { R32: "R16", R16: "QF", QF: "SF" };
 const LABEL: Record<string, string> = { R32: "R32", R16: "R16", QF: "QF", SF: "Semis" };
 const SHORT_NAME: Record<string, string> = {
   "Cape Verde Islands": "Cape Verde",
@@ -38,6 +39,12 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Connector lines (SVG overlay) computed from real box positions.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const boxEls = useRef<Record<string, HTMLDivElement | null>>({});
+  const [lines, setLines] = useState<string[]>([]);
+  const [dims, setDims] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+
   const teamMeta = new Map(teams.map((t) => [t.id, t]));
   const nameOf = (id: number | null | undefined) => {
     if (!id) return "TBD";
@@ -45,10 +52,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
     return SHORT_NAME[full] ?? full;
   };
 
-  // Box width auto-fits the longest team name (in character units) + room for
-  // the flag and padding — no pixel guessing, always exactly as wide as needed.
-  const maxChars = Math.max(13, ...teams.map((t) => (SHORT_NAME[t.name] ?? t.name).length));
-  const boxW = `calc(${maxChars}ch + 2.5rem)`;
+  const boxW = "130px";
 
   useEffect(() => {
     (async () => {
@@ -63,6 +67,40 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
       setLoaded(true);
     })();
   }, []);
+
+  // Draw orthogonal connectors from each match to the box its winner advances
+  // into, measured from the real DOM so it stays correct at any size.
+  useEffect(() => {
+    const recompute = () => {
+      const c = contentRef.current;
+      if (!c) return;
+      const cRect = c.getBoundingClientRect();
+      const rounds: [string, number][] = [["R32", 16], ["R16", 8], ["QF", 4], ["SF", 2]];
+      const segs: string[] = [];
+      for (const [round, count] of rounds) {
+        const targetRound = round === "SF" ? "F" : NEXT[round];
+        for (let m = 0; m < count; m++) {
+          const src = boxEls.current[`${round}-${m}`];
+          const tgt = boxEls.current[round === "SF" ? "F" : `${targetRound}-${Math.floor(m / 2)}`];
+          if (!src || !tgt) continue;
+          const s = src.getBoundingClientRect();
+          const t = tgt.getBoundingClientRect();
+          const sMidY = s.top - cRect.top + s.height / 2;
+          const tMidY = t.top - cRect.top + t.height / 2;
+          const srcLeft = s.left + s.right < t.left + t.right;
+          const sx = (srcLeft ? s.right : s.left) - cRect.left;
+          const tx = (srcLeft ? t.left : t.right) - cRect.left;
+          const midX = (sx + tx) / 2;
+          segs.push(`${sx},${sMidY} ${midX},${sMidY} ${midX},${tMidY} ${tx},${tMidY}`);
+        }
+      }
+      setLines(segs);
+      setDims({ w: c.scrollWidth, h: c.scrollHeight });
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [loaded, picks, locked]);
 
   const participants = (roundKey: string, i: number, p: Picks): [number | null, number | null] => {
     if (roundKey === "R32") {
@@ -143,10 +181,14 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
 
   const matchBox = (round: string, i: number, mode: BoxMode = "normal") => {
     const slot = `${round}-${i + 1}`;
+    const refKey = round === "F" ? "F" : `${round}-${i}`;
     const [a, b] = participants(round, i, picks);
     return (
       <MatchBox
         key={slot}
+        innerRef={(el) => {
+          boxEls.current[refKey] = el;
+        }}
         a={a}
         b={b}
         picked={picks[slot] ?? null}
@@ -201,8 +243,19 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
       {/* Full-bleed: break out of the page's max-width so the bracket uses the
           whole viewport. Scrolls horizontally when it's wider than the screen. */}
       <div className="relative left-1/2 w-screen -translate-x-1/2 overflow-x-auto px-4 pb-2">
-        <div className="mx-auto flex w-max items-stretch gap-4">
-          {column("R32", "left")}
+        <div ref={contentRef} className="relative mx-auto w-max">
+          <svg
+            width={dims.w}
+            height={dims.h}
+            className="pointer-events-none absolute left-0 top-0"
+            aria-hidden="true"
+          >
+            {lines.map((pts, idx) => (
+              <polyline key={idx} points={pts} fill="none" stroke="#cbd5e1" strokeWidth={1.5} />
+            ))}
+          </svg>
+          <div className="flex items-stretch gap-4">
+            {column("R32", "left")}
           {column("R16", "left")}
           {column("QF", "left")}
           {column("SF", "left")}
@@ -238,10 +291,11 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
             )}
           </div>
 
-          {column("SF", "right")}
-          {column("QF", "right")}
-          {column("R16", "right")}
-          {column("R32", "right")}
+            {column("SF", "right")}
+            {column("QF", "right")}
+            {column("R16", "right")}
+            {column("R32", "right")}
+          </div>
         </div>
       </div>
 
@@ -268,6 +322,7 @@ function MatchBox({
   teamMeta,
   nameOf,
   onPick,
+  innerRef,
 }: {
   a: number | null;
   b: number | null;
@@ -278,6 +333,7 @@ function MatchBox({
   teamMeta: Map<number, Team>;
   nameOf: (id: number | null | undefined) => string;
   onPick: (id: number | null) => void;
+  innerRef?: (el: HTMLDivElement | null) => void;
 }) {
   // In the Final: the chosen team is gold (champion), the other finalist silver
   // (runner-up). Bronze box uses bronze; every other round uses green.
@@ -287,7 +343,7 @@ function MatchBox({
     return id ? "hover:bg-slate-50" : "text-slate-300";
   };
   return (
-    <div className="overflow-hidden rounded border border-slate-200 bg-white" style={{ width }}>
+    <div ref={innerRef} className="relative z-10 overflow-hidden rounded border border-slate-200 bg-white" style={{ width }}>
       {[a, b].map((id, idx) => (
         <button
           key={idx}
