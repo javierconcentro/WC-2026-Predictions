@@ -24,7 +24,13 @@ const SCORING_ROUNDS = [
 
 const PREV: Record<string, string> = { R16: "R32", QF: "R16", SF: "QF" };
 const LABEL: Record<string, string> = { R32: "R32", R16: "R16", QF: "QF", SF: "Semis" };
-const BOX_W = 176; // fixed, wide enough for long names e.g. "Cape Verde Islands"
+const BOX_W = 132; // ~ width of "United States", so the whole bracket fits without scrolling
+const SHORT_NAME: Record<string, string> = {
+  "Cape Verde Islands": "Cape Verde",
+  "Bosnia-Herzegovina": "Bosnia",
+};
+
+type BoxMode = "normal" | "final" | "bronze";
 
 export default function BracketEditor({ matchups, teams, locked }: Props) {
   const [picks, setPicks] = useState<Picks>({});
@@ -34,7 +40,11 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const teamMeta = new Map(teams.map((t) => [t.id, t]));
-  const nameOf = (id: number | null | undefined) => (id ? teamMeta.get(id)?.name ?? "TBD" : "TBD");
+  const nameOf = (id: number | null | undefined) => {
+    if (!id) return "TBD";
+    const full = teamMeta.get(id)?.name ?? "TBD";
+    return SHORT_NAME[full] ?? full;
+  };
 
   useEffect(() => {
     (async () => {
@@ -127,7 +137,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
     return Array.from({ length: half }, (_, k) => start + k);
   };
 
-  const matchBox = (round: string, i: number, gold = false) => {
+  const matchBox = (round: string, i: number, mode: BoxMode = "normal") => {
     const slot = `${round}-${i + 1}`;
     const [a, b] = participants(round, i, picks);
     return (
@@ -137,7 +147,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
         b={b}
         picked={picks[slot] ?? null}
         locked={locked}
-        gold={gold}
+        mode={mode}
         teamMeta={teamMeta}
         nameOf={nameOf}
         onPick={(id) => choose(slot, id)}
@@ -197,7 +207,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
             <div className="text-center text-[10px] font-semibold uppercase tracking-wide text-amber-500">
               🏆 Final
             </div>
-            {matchBox("F", 0, true)}
+            {matchBox("F", 0, "final")}
             <div className="mt-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">
               3rd place
             </div>
@@ -214,7 +224,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
                 b={cands[1]}
                 picked={bronze}
                 locked={locked}
-                gold={false}
+                mode="bronze"
                 teamMeta={teamMeta}
                 nameOf={nameOf}
                 onPick={(id) => id && chooseBronze(id)}
@@ -237,12 +247,17 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
   );
 }
 
+const GOLD = "bg-[#fbe7a2] font-semibold text-[#7a5c00]";
+const SILVER = "bg-[#e1e4e9] font-semibold text-[#5b6470]";
+const BRONZE = "bg-[#ecc9a3] font-semibold text-[#80501f]";
+const GREEN = "bg-emerald-50 font-semibold text-emerald-700";
+
 function MatchBox({
   a,
   b,
   picked,
   locked,
-  gold,
+  mode,
   teamMeta,
   nameOf,
   onPick,
@@ -251,36 +266,35 @@ function MatchBox({
   b: number | null;
   picked: number | null;
   locked: boolean;
-  gold: boolean;
+  mode: BoxMode;
   teamMeta: Map<number, Team>;
   nameOf: (id: number | null | undefined) => string;
   onPick: (id: number | null) => void;
 }) {
+  // In the Final: the chosen team is gold (champion), the other finalist silver
+  // (runner-up). Bronze box uses bronze; every other round uses green.
+  const rowClass = (id: number | null) => {
+    if (mode === "final" && picked != null && id != null) return id === picked ? GOLD : SILVER;
+    if (id != null && picked === id) return mode === "bronze" ? BRONZE : GREEN;
+    return id ? "hover:bg-slate-50" : "text-slate-300";
+  };
   return (
     <div className="overflow-hidden rounded border border-slate-200 bg-white" style={{ width: BOX_W }}>
-      {[a, b].map((id, idx) => {
-        const selected = picked != null && picked === id;
-        const pickable = !locked && !!id;
-        const selClass = gold
-          ? "bg-amber-100 font-semibold text-amber-800"
-          : "bg-emerald-50 font-semibold text-emerald-700";
-        return (
-          <button
-            key={idx}
-            type="button"
-            disabled={!pickable}
-            title={id ? nameOf(id) : undefined}
-            onClick={() => onPick(id)}
-            className={`flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs leading-tight ${
-              idx === 0 ? "border-b border-slate-100" : ""
-            } ${selected ? selClass : id ? "hover:bg-slate-50" : "text-slate-300"}`}
-          >
-            <Flag id={id} teamMeta={teamMeta} nameOf={nameOf} />
-            <span className="truncate">{nameOf(id)}</span>
-            {selected && <span className={`ml-auto ${gold ? "text-amber-500" : "text-emerald-600"}`}>{gold ? "★" : "✓"}</span>}
-          </button>
-        );
-      })}
+      {[a, b].map((id, idx) => (
+        <button
+          key={idx}
+          type="button"
+          disabled={locked || !id}
+          title={id ? nameOf(id) : undefined}
+          onClick={() => onPick(id)}
+          className={`flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs leading-tight ${
+            idx === 0 ? "border-b border-slate-100" : ""
+          } ${rowClass(id)}`}
+        >
+          <Flag id={id} teamMeta={teamMeta} nameOf={nameOf} />
+          <span className="truncate">{nameOf(id)}</span>
+        </button>
+      ))}
     </div>
   );
 }
