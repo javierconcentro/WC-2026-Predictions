@@ -24,7 +24,7 @@ const SCORING_ROUNDS = [
 
 const PREV: Record<string, string> = { R16: "R32", QF: "R16", SF: "QF" };
 const LABEL: Record<string, string> = { R32: "R32", R16: "R16", QF: "QF", SF: "Semis" };
-const BOX_W = 110; // compact; still fits "United States", whole bracket fits without scrolling
+const BOX_W = 120; // compact; still fits "United States", whole bracket fits without scrolling
 const SHORT_NAME: Record<string, string> = {
   "Cape Verde Islands": "Cape Verde",
   "Bosnia-Herzegovina": "Bosnia",
@@ -287,7 +287,7 @@ function MatchBox({
           disabled={locked || !id}
           title={id ? nameOf(id) : undefined}
           onClick={() => onPick(id)}
-          className={`flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs leading-tight ${
+          className={`flex w-full items-center gap-1 px-1 py-1.5 text-left text-xs leading-tight ${
             idx === 0 ? "border-b border-slate-100" : ""
           } ${rowClass(id)}`}
         >
