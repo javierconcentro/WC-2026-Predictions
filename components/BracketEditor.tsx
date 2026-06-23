@@ -13,14 +13,18 @@ interface Props {
 
 type Picks = Record<string, number>; // slot -> picked team id
 
-const ROUNDS = [
-  { key: "R32", label: "Round of 32", matches: 16, pts: 3 },
-  { key: "R16", label: "Round of 16", matches: 8, pts: 5 },
-  { key: "QF", label: "Quarter-finals", matches: 4, pts: 8 },
-  { key: "SF", label: "Semi-finals", matches: 2, pts: 12 },
+// Rounds that score in Part 3 (the Final pick / champion is recorded as F-1
+// but scored via Awards, so it's not in here).
+const SCORING_ROUNDS = [
+  { key: "R32", matches: 16 },
+  { key: "R16", matches: 8 },
+  { key: "QF", matches: 4 },
+  { key: "SF", matches: 2 },
 ] as const;
 
 const PREV: Record<string, string> = { R16: "R32", QF: "R16", SF: "QF" };
+const LABEL: Record<string, string> = { R32: "R32", R16: "R16", QF: "QF", SF: "Semis" };
+const BOX_W = 116;
 
 export default function BracketEditor({ matchups, teams, locked }: Props) {
   const [picks, setPicks] = useState<Picks>({});
@@ -46,26 +50,27 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
     })();
   }, []);
 
-  // Participants of a given match, derived from the previous round's winners.
   const participants = (roundKey: string, i: number, p: Picks): [number | null, number | null] => {
     if (roundKey === "R32") {
       const m = matchups[i];
       return [m?.a?.id ?? null, m?.b?.id ?? null];
     }
+    if (roundKey === "F") return [p["SF-1"] ?? null, p["SF-2"] ?? null];
     const prev = PREV[roundKey];
     return [p[`${prev}-${2 * i + 1}`] ?? null, p[`${prev}-${2 * i + 2}`] ?? null];
   };
 
-  // Drop any downstream pick that's no longer a valid participant after a change.
   const prune = (p: Picks): Picks => {
     const next = { ...p };
-    for (const round of ROUNDS) {
+    for (const round of SCORING_ROUNDS) {
       for (let i = 0; i < round.matches; i++) {
         const slot = `${round.key}-${i + 1}`;
         const [a, b] = participants(round.key, i, next);
         if (next[slot] != null && next[slot] !== a && next[slot] !== b) delete next[slot];
       }
     }
+    const [fa, fb] = participants("F", 0, next);
+    if (next["F-1"] != null && next["F-1"] !== fa && next["F-1"] !== fb) delete next["F-1"];
     return next;
   };
 
@@ -115,16 +120,51 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
 
   if (!loaded) return <p className="text-sm text-slate-400">Loading the bracket…</p>;
 
-  const finalists: [number | null, number | null] = [picks["SF-1"] ?? null, picks["SF-2"] ?? null];
+  const sideMatches = (round: string, side: "left" | "right"): number[] => {
+    const total = { R32: 16, R16: 8, QF: 4, SF: 2 }[round] ?? 0;
+    const half = total / 2;
+    const start = side === "left" ? 0 : half;
+    return Array.from({ length: half }, (_, k) => start + k);
+  };
+
+  const matchBox = (round: string, i: number, gold = false) => {
+    const slot = `${round}-${i + 1}`;
+    const [a, b] = participants(round, i, picks);
+    return (
+      <MatchBox
+        key={slot}
+        a={a}
+        b={b}
+        picked={picks[slot] ?? null}
+        locked={locked}
+        gold={gold}
+        teamMeta={teamMeta}
+        nameOf={nameOf}
+        onPick={(id) => choose(slot, id)}
+      />
+    );
+  };
+
+  const column = (round: string, side: "left" | "right") => (
+    <div key={side + round} className="flex flex-col">
+      <div className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+        {LABEL[round]}
+      </div>
+      <div className="flex flex-1 flex-col justify-around gap-1.5">
+        {sideMatches(round, side).map((i) => matchBox(round, i))}
+      </div>
+    </div>
+  );
+
   const cands = bronzeCandidates(picks);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-500">
           {locked
             ? "Bracket is locked — good luck!"
-            : "Tap the team you think advances in each match. Winners flow to the next round automatically."}
+            : "Tap who advances. Winners flow inward to the Final. Scroll sideways to see it all."}
         </p>
         {!locked && (
           <span
@@ -143,117 +183,99 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
         )}
       </div>
 
-      {ROUNDS.map((round) => (
-        <section key={round.key} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="mb-2 flex items-baseline justify-between">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">{round.label}</h3>
-            <span className="text-xs text-slate-400">{round.pts} pts each</span>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {Array.from({ length: round.matches }, (_, i) => {
-              const slot = `${round.key}-${i + 1}`;
-              const [a, b] = participants(round.key, i, picks);
-              return (
-                <MatchCard
-                  key={slot}
-                  a={a}
-                  b={b}
-                  picked={picks[slot] ?? null}
-                  locked={locked}
-                  nameOf={nameOf}
-                  teamMeta={teamMeta}
-                  onPick={(id) => choose(slot, id)}
-                />
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      <div className="overflow-x-auto pb-2">
+        <div className="flex min-w-max items-stretch gap-1.5">
+          {column("R32", "left")}
+          {column("R16", "left")}
+          {column("QF", "left")}
+          {column("SF", "left")}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">Final</h3>
-        <div className="rounded-lg border border-slate-200 p-2 text-sm">
-          <p className="flex items-center gap-1.5">
-            <TeamLabel id={finalists[0]} nameOf={nameOf} teamMeta={teamMeta} /> <span className="text-slate-400">vs</span>{" "}
-            <TeamLabel id={finalists[1]} nameOf={nameOf} teamMeta={teamMeta} />
-          </p>
-          <p className="mt-1 text-xs text-slate-400">🏆 Champion is chosen in the Awards tab (worth 25 pts there).</p>
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="mb-2 flex items-baseline justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Third place</h3>
-          <span className="text-xs text-slate-400">10 pts</span>
-        </div>
-        {cands.length < 2 ? (
-          <p className="text-xs text-slate-400">Pick both semi-final winners first — the two losers play for bronze.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {cands.map((id) => (
-              <button
-                key={id}
-                type="button"
-                disabled={locked}
-                onClick={() => chooseBronze(id)}
-                className={`flex items-center gap-1.5 rounded-lg border px-2 py-2 text-sm ${
-                  bronze === id
-                    ? "border-emerald-500 bg-emerald-50 font-semibold text-emerald-700"
-                    : "border-slate-200 hover:border-slate-400"
-                } disabled:opacity-70`}
+          {/* Center: Final (gold) + Third place */}
+          <div className="flex flex-col justify-center gap-2 px-0.5">
+            <div className="text-center text-[10px] font-semibold uppercase tracking-wide text-amber-500">
+              🏆 Final
+            </div>
+            {matchBox("F", 0, true)}
+            <div className="mt-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              3rd place
+            </div>
+            {cands.length < 2 ? (
+              <div
+                className="rounded border border-dashed border-slate-200 px-1.5 py-2 text-center text-[10px] text-slate-400"
+                style={{ width: BOX_W }}
               >
-                <Flag id={id} teamMeta={teamMeta} nameOf={nameOf} />
-                <span className="truncate">{nameOf(id)}</span>
-              </button>
-            ))}
+                Pick both semis
+              </div>
+            ) : (
+              <MatchBox
+                a={cands[0]}
+                b={cands[1]}
+                picked={bronze}
+                locked={locked}
+                gold={false}
+                teamMeta={teamMeta}
+                nameOf={nameOf}
+                onPick={(id) => id && chooseBronze(id)}
+              />
+            )}
           </div>
-        )}
-      </section>
+
+          {column("SF", "right")}
+          {column("QF", "right")}
+          {column("R16", "right")}
+          {column("R32", "right")}
+        </div>
+      </div>
+
+      <p className="text-center text-xs text-slate-400">
+        Each pick scores when that team reaches the round — R16 = 3 · QF = 5 · SF = 8 · Final = 12 · Bronze = 10.
+        Your gold champion is your bracket winner; the 25-pt champion is your Awards pick.
+      </p>
     </div>
   );
 }
 
-function MatchCard({
+function MatchBox({
   a,
   b,
   picked,
   locked,
-  nameOf,
+  gold,
   teamMeta,
+  nameOf,
   onPick,
 }: {
   a: number | null;
   b: number | null;
   picked: number | null;
   locked: boolean;
-  nameOf: (id: number | null | undefined) => string;
+  gold: boolean;
   teamMeta: Map<number, Team>;
+  nameOf: (id: number | null | undefined) => string;
   onPick: (id: number | null) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200">
+    <div className="overflow-hidden rounded border border-slate-200 bg-white" style={{ width: BOX_W }}>
       {[a, b].map((id, idx) => {
         const selected = picked != null && picked === id;
         const pickable = !locked && !!id;
+        const selClass = gold
+          ? "bg-amber-100 font-semibold text-amber-800"
+          : "bg-emerald-50 font-semibold text-emerald-700";
         return (
           <button
             key={idx}
             type="button"
             disabled={!pickable}
+            title={id ? nameOf(id) : undefined}
             onClick={() => onPick(id)}
-            className={`flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-sm ${
+            className={`flex w-full items-center gap-1 px-1.5 py-1 text-left text-[11px] leading-tight ${
               idx === 0 ? "border-b border-slate-100" : ""
-            } ${
-              selected
-                ? "bg-emerald-50 font-semibold text-emerald-700"
-                : id
-                  ? "hover:bg-slate-50"
-                  : "text-slate-300"
-            }`}
+            } ${selected ? selClass : id ? "hover:bg-slate-50" : "text-slate-300"}`}
           >
             <Flag id={id} teamMeta={teamMeta} nameOf={nameOf} />
             <span className="truncate">{nameOf(id)}</span>
-            {selected && <span className="ml-auto text-emerald-600">✓</span>}
+            {selected && <span className={`ml-auto ${gold ? "text-amber-500" : "text-emerald-600"}`}>{gold ? "★" : "✓"}</span>}
           </button>
         );
       })}
@@ -274,22 +296,5 @@ function Flag({
   const t = teamMeta.get(id);
   const url = flagUrl(t?.code, t?.name ?? nameOf(id));
   if (!url) return null;
-  return <img src={url} alt="" className="h-3 w-auto shrink-0 rounded-[2px]" />;
-}
-
-function TeamLabel({
-  id,
-  teamMeta,
-  nameOf,
-}: {
-  id: number | null;
-  teamMeta: Map<number, Team>;
-  nameOf: (id: number | null | undefined) => string;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1 font-medium">
-      <Flag id={id} teamMeta={teamMeta} nameOf={nameOf} />
-      {nameOf(id)}
-    </span>
-  );
+  return <img src={url} alt="" className="h-2.5 w-auto shrink-0 rounded-[1px]" />;
 }
