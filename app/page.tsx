@@ -78,7 +78,7 @@ export default async function LeaderboardPage() {
       )}
 
       <p className="text-center text-xs text-slate-400">
-        Tap a name to see their full predictions. Ties break on champion, then runner-up.
+        Tap a name to see their full predictions. Group Stage points reflect the live standings, so they&apos;ll shift each matchday. Ties break on champion, then runner-up.
       </p>
 
       <p className="rounded-xl bg-[#101828] px-4 py-2.5 text-center text-sm font-semibold text-white">

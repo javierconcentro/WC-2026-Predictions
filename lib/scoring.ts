@@ -54,27 +54,12 @@ export function scorePart1(picks: Part1Picks | null, actuals: Actuals): {
   return { points: pts, championCorrect, runnerupCorrect };
 }
 
-// A group only scores once all 6 of its matches are finished.
-export function completedGroups(fixtures: Fixture[]): Set<string> {
-  const done = new Set<string>();
-  const byGroup = new Map<string, { total: number; finished: number }>();
-  for (const f of fixtures) {
-    if (f.stage !== "group" || !f.group_letter) continue;
-    const g = byGroup.get(f.group_letter) ?? { total: 0, finished: 0 };
-    g.total += 1;
-    if (f.status === "finished") g.finished += 1;
-    byGroup.set(f.group_letter, g);
-  }
-  for (const [letter, g] of byGroup) {
-    if (g.total >= 6 && g.finished === g.total) done.add(letter);
-  }
-  return done;
-}
-
+// Group rankings score against the CURRENT live standings — points accrue as
+// soon as a team holds a predicted position, and rise/fall as standings change
+// through the group stage (no longer gated on all 6 matches being finished).
 export function scorePart2(
   rankings: GroupRankingRow[],
-  standings: StandingRow[],
-  doneGroups: Set<string>
+  standings: StandingRow[]
 ): number {
   const positionPoints = [0, POINTS.part2.pos1, POINTS.part2.pos2, POINTS.part2.pos3, POINTS.part2.pos4];
   const actualAt = new Map<string, number>(); // `${group}-${position}` -> team_id
@@ -82,7 +67,6 @@ export function scorePart2(
 
   let pts = 0;
   for (const r of rankings) {
-    if (!doneGroups.has(r.group_letter)) continue;
     if (actualAt.get(`${r.group_letter}-${r.predicted_position}`) === r.team_id) {
       pts += positionPoints[r.predicted_position] ?? 0;
     }
@@ -154,7 +138,7 @@ export function scorePlayer(
   part12Locked: boolean
 ): ScoreBreakdown {
   const p1 = scorePart1(part1, actuals);
-  const p2 = scorePart2(rankings, standings, completedGroups(fixtures));
+  const p2 = scorePart2(rankings, standings);
   const p3 = scorePart3(bracket, bronzePick, fixtures, actuals);
   const part1Pts = part12Locked ? p1.points : 0;
   const part2Pts = part12Locked ? p2 : 0;
