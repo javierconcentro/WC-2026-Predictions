@@ -24,7 +24,6 @@ const SCORING_ROUNDS = [
 
 const PREV: Record<string, string> = { R16: "R32", QF: "R16", SF: "QF" };
 const LABEL: Record<string, string> = { R32: "R32", R16: "R16", QF: "QF", SF: "Semis" };
-const BOX_W = 150; // comfortably fits "United States" with room to spare
 const SHORT_NAME: Record<string, string> = {
   "Cape Verde Islands": "Cape Verde",
   "Bosnia-Herzegovina": "Bosnia",
@@ -45,6 +44,11 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
     const full = teamMeta.get(id)?.name ?? "TBD";
     return SHORT_NAME[full] ?? full;
   };
+
+  // Box width auto-fits the longest team name (in character units) + room for
+  // the flag and padding — no pixel guessing, always exactly as wide as needed.
+  const maxChars = Math.max(13, ...teams.map((t) => (SHORT_NAME[t.name] ?? t.name).length));
+  const boxW = `calc(${maxChars}ch + 2.5rem)`;
 
   useEffect(() => {
     (async () => {
@@ -148,6 +152,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
         picked={picks[slot] ?? null}
         locked={locked}
         mode={mode}
+        width={boxW}
         teamMeta={teamMeta}
         nameOf={nameOf}
         onPick={(id) => choose(slot, id)}
@@ -214,7 +219,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
             {cands.length < 2 ? (
               <div
                 className="rounded border border-dashed border-slate-200 px-1.5 py-2 text-center text-[10px] text-slate-400"
-                style={{ width: BOX_W }}
+                style={{ width: boxW }}
               >
                 Pick both semis
               </div>
@@ -225,6 +230,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
                 picked={bronze}
                 locked={locked}
                 mode="bronze"
+                width={boxW}
                 teamMeta={teamMeta}
                 nameOf={nameOf}
                 onPick={(id) => id && chooseBronze(id)}
@@ -258,6 +264,7 @@ function MatchBox({
   picked,
   locked,
   mode,
+  width,
   teamMeta,
   nameOf,
   onPick,
@@ -267,6 +274,7 @@ function MatchBox({
   picked: number | null;
   locked: boolean;
   mode: BoxMode;
+  width: string;
   teamMeta: Map<number, Team>;
   nameOf: (id: number | null | undefined) => string;
   onPick: (id: number | null) => void;
@@ -279,7 +287,7 @@ function MatchBox({
     return id ? "hover:bg-slate-50" : "text-slate-300";
   };
   return (
-    <div className="overflow-hidden rounded border border-slate-200 bg-white" style={{ width: BOX_W }}>
+    <div className="overflow-hidden rounded border border-slate-200 bg-white" style={{ width }}>
       {[a, b].map((id, idx) => (
         <button
           key={idx}
