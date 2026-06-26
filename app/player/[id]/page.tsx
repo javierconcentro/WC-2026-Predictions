@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { currentPlayer, getConfig, part12Locked } from "@/lib/auth";
+import { currentPlayer, getConfig, part12Locked, bracketLocked } from "@/lib/auth";
 import { GROUPS, POINTS } from "@/lib/types";
 import type { Actuals, GroupRankingRow, Part1Picks, StandingRow, Team } from "@/lib/types";
 
@@ -190,7 +190,11 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
         <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Bracket
         </h3>
-        {(bracket ?? []).length === 0 ? (
+        {!isMe && !bracketLocked(cfg) ? (
+          <p className="text-sm text-slate-400">
+            Hidden until the bracket locks (Mon 1pm) so nobody can copy.
+          </p>
+        ) : (bracket ?? []).length === 0 ? (
           <p className="text-sm text-slate-400">Bracket opens when the group stage finishes.</p>
         ) : (
           <div className="space-y-1 text-sm">
