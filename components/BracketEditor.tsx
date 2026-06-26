@@ -9,6 +9,7 @@ interface Props {
   matchups: Matchup[]; // the 16 seeded Round-of-32 pairings
   teams: Team[];
   locked: boolean;
+  slotLocks?: Record<string, string>; // slot -> ISO time it individually locks
 }
 
 type Picks = Record<string, number>; // slot -> picked team id
@@ -32,7 +33,11 @@ const SHORT_NAME: Record<string, string> = {
 
 type BoxMode = "normal" | "final" | "bronze";
 
-export default function BracketEditor({ matchups, teams, locked }: Props) {
+export default function BracketEditor({ matchups, teams, locked, slotLocks = {} }: Props) {
+  const slotLockedNow = (slot: string) => {
+    const t = slotLocks[slot];
+    return !!t && Date.now() >= Date.parse(t);
+  };
   const [picks, setPicks] = useState<Picks>({});
   const [bronze, setBronze] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -153,7 +158,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
   };
 
   const choose = (slot: string, teamId: number | null) => {
-    if (locked || !teamId) return;
+    if (locked || slotLockedNow(slot) || !teamId) return;
     setPicks((prev) => {
       const next = prune({ ...prev, [slot]: teamId });
       const cands = bronzeCandidates(next);
@@ -192,7 +197,7 @@ export default function BracketEditor({ matchups, teams, locked }: Props) {
         a={a}
         b={b}
         picked={picks[slot] ?? null}
-        locked={locked}
+        locked={locked || slotLockedNow(slot)}
         mode={mode}
         width={boxW}
         teamMeta={teamMeta}

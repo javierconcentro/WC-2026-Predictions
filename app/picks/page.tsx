@@ -2,7 +2,7 @@ import { db, dbConfigured } from "@/lib/db";
 import { currentPlayer, getConfig, part12Locked, bracketOpen, bracketLocked } from "@/lib/auth";
 import JoinGate from "@/components/JoinGate";
 import PicksEditor from "@/components/PicksEditor";
-import { fixedR32Matchups } from "@/lib/bracket";
+import { fixedR32Matchups, R32_SLOT_LOCKS } from "@/lib/bracket";
 import type { Team } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,7 @@ export default async function PicksPage() {
       bracketMatchups={matchups}
       bracketOpen={bracketOpen(cfg)}
       bracketLocked={bracketLocked(cfg)}
+      bracketSlotLocks={R32_SLOT_LOCKS}
     />
   );
 }

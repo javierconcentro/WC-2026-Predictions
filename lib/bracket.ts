@@ -71,6 +71,13 @@ const R32_FIXED: [string | null, string | null][] = [
   ["Argentina", null],
 ];
 
+// Per-slot lock overrides (ISO UTC) for matches that kick off BEFORE the global
+// bracket lock — that slot freezes at this time so nobody picks it after it
+// starts. Everything without an entry locks at the global bracket_lock_at.
+export const R32_SLOT_LOCKS: Record<string, string> = {
+  "R32-1": "2026-06-28T19:00:00Z", // South Africa vs Canada — locks at kickoff (Sun 3pm ET)
+};
+
 export function fixedR32Matchups(teams: Team[]): Matchup[] {
   const byName = new Map(teams.map((t) => [t.name, t]));
   const seed = (name: string | null): SeedTeam | null => {
