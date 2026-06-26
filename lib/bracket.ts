@@ -49,6 +49,38 @@ export function seedQualifiers(standings: StandingRow[], teams: Team[]): SeedTea
   return [...winners, ...runnersUp, ...bestThirds].map(seed);
 }
 
+// The actual Round-of-32 bracket (official pairings). null = TBD until the
+// feeding group finishes. Order = bracket position (R32-1..16); adjacent pairs
+// feed the same Round-of-16 match. Update names here as TBDs are decided.
+const R32_FIXED: [string | null, string | null][] = [
+  ["South Africa", "Canada"],
+  ["Netherlands", "Morocco"],
+  ["Germany", null],
+  [null, null],
+  [null, null],
+  ["United States", "Bosnia-Herzegovina"],
+  [null, null],
+  [null, null],
+  ["Brazil", "Japan"],
+  ["Ivory Coast", null],
+  ["Mexico", null],
+  [null, null],
+  ["Switzerland", null],
+  [null, null],
+  ["Australia", null],
+  ["Argentina", null],
+];
+
+export function fixedR32Matchups(teams: Team[]): Matchup[] {
+  const byName = new Map(teams.map((t) => [t.name, t]));
+  const seed = (name: string | null): SeedTeam | null => {
+    if (!name) return null;
+    const t = byName.get(name);
+    return t ? { id: t.id, name: t.name, code: t.code ?? null } : null;
+  };
+  return R32_FIXED.map(([a, b], i) => ({ slot: `R32-${i + 1}`, a: seed(a), b: seed(b) }));
+}
+
 export function r32Matchups(seeds: SeedTeam[]): Matchup[] {
   const matchups: Matchup[] = [];
   const half = Math.floor(seeds.length / 2);
