@@ -111,6 +111,18 @@ export function r32SlotLocks(): Record<string, string> {
   return locks;
 }
 
+// Actual winners of finished R32 matches, by slot — used to pre-fill a slot a
+// player left blank once that match is over (so it flows into the next round).
+export function r32ResolvedWinners(fixtures: Fixture[]): Record<string, number> {
+  const byKickoff = new Map(fixtures.map((f) => [Date.parse(f.kickoff_utc), f]));
+  const out: Record<string, number> = {};
+  R32_SLOT_KICKOFFS.forEach((t, i) => {
+    const f = byKickoff.get(Date.parse(t));
+    if (f && f.status === "finished" && f.winner_team_id) out[`R32-${i + 1}`] = f.winner_team_id;
+  });
+  return out;
+}
+
 // Build the bracket's Round-of-32 from the real fixtures (all 32 teams) in the
 // official slot order, by matching each slot's kickoff to its fixture.
 export function r32FromFixtures(

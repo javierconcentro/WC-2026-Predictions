@@ -2,7 +2,7 @@ import { db, dbConfigured } from "@/lib/db";
 import { currentPlayer, getConfig, part12Locked, bracketOpen, bracketLocked } from "@/lib/auth";
 import JoinGate from "@/components/JoinGate";
 import PicksEditor from "@/components/PicksEditor";
-import { r32FromFixtures } from "@/lib/bracket";
+import { r32FromFixtures, r32ResolvedWinners } from "@/lib/bracket";
 import type { Fixture, Team } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +27,7 @@ export default async function PicksPage() {
   const locked = part12Locked(cfg);
 
   const { matchups, slotLocks } = r32FromFixtures((r32 ?? []) as Fixture[], (teams ?? []) as Team[]);
+  const resolvedWinners = r32ResolvedWinners((r32 ?? []) as Fixture[]);
 
   return (
     <PicksEditor
@@ -38,6 +39,7 @@ export default async function PicksPage() {
       bracketOpen={bracketOpen(cfg)}
       bracketLocked={bracketLocked(cfg)}
       bracketSlotLocks={slotLocks}
+      bracketResolvedWinners={resolvedWinners}
     />
   );
 }

@@ -10,6 +10,7 @@ interface Props {
   teams: Team[];
   locked: boolean;
   slotLocks?: Record<string, string>; // slot -> ISO time it individually locks
+  resolvedWinners?: Record<string, number>; // slot -> actual winner of a finished match
 }
 
 type Picks = Record<string, number>; // slot -> picked team id
@@ -33,7 +34,7 @@ const SHORT_NAME: Record<string, string> = {
 
 type BoxMode = "normal" | "final" | "bronze";
 
-export default function BracketEditor({ matchups, teams, locked, slotLocks = {} }: Props) {
+export default function BracketEditor({ matchups, teams, locked, slotLocks = {}, resolvedWinners = {} }: Props) {
   const slotLockedNow = (slot: string) => {
     const t = slotLocks[slot];
     return !!t && Date.now() >= Date.parse(t);
@@ -66,6 +67,11 @@ export default function BracketEditor({ matchups, teams, locked, slotLocks = {} 
         const { picks: rows, bronze_winner_team_id } = await res.json();
         const map: Picks = {};
         for (const r of rows ?? []) map[r.slot] = r.picked_team_id;
+        // Pre-fill any locked+finished match left blank with its actual winner,
+        // so it shows as decided and flows into the next round.
+        for (const [slot, winner] of Object.entries(resolvedWinners)) {
+          if (map[slot] == null && slotLockedNow(slot)) map[slot] = winner;
+        }
         setPicks(map);
         setBronze(bronze_winner_team_id ?? null);
       }

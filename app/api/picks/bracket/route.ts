@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { currentPlayer, getConfig, bracketLocked } from "@/lib/auth";
-import { r32SlotLocks } from "@/lib/bracket";
+import { r32SlotLocks, r32ResolvedWinners } from "@/lib/bracket";
+import type { Fixture } from "@/lib/types";
 
 export async function GET() {
   const player = await currentPlayer();
@@ -41,11 +42,18 @@ export async function POST(req: NextRequest) {
   );
   let preserved: { slot: string; picked_team_id: number }[] = [];
   if (lockedSlots.size > 0) {
-    const { data } = await supabase
-      .from("bracket_picks")
-      .select("slot,picked_team_id")
-      .eq("player_id", player.id);
-    preserved = (data ?? []).filter((r: any) => lockedSlots.has(r.slot));
+    const [{ data: existing }, { data: r32 }] = await Promise.all([
+      supabase.from("bracket_picks").select("slot,picked_team_id").eq("player_id", player.id),
+      supabase.from("fixtures").select("kickoff_utc,status,winner_team_id").eq("stage", "R32"),
+    ]);
+    const existingBySlot = new Map((existing ?? []).map((r: any) => [r.slot, r.picked_team_id]));
+    const resolved = r32ResolvedWinners((r32 ?? []) as Fixture[]);
+    // For each locked slot keep the player's pick, or fall back to the actual
+    // winner if they left it blank. Locked picks can't be changed by the client.
+    for (const slot of lockedSlots) {
+      const teamId = existingBySlot.get(slot) ?? resolved[slot];
+      if (Number.isInteger(teamId)) preserved.push({ slot, picked_team_id: teamId as number });
+    }
   }
 
   await supabase.from("bracket_picks").delete().eq("player_id", player.id);

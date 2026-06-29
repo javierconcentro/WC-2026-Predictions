@@ -18,6 +18,7 @@ interface Props {
   bracketOpen: boolean;
   bracketLocked: boolean;
   bracketSlotLocks: Record<string, string>;
+  bracketResolvedWinners: Record<string, number>;
 }
 
 interface Part1State {
@@ -31,7 +32,7 @@ interface Part1State {
 
 type Tab = "awards" | "groups" | "bracket";
 
-export default function PicksEditor({ playerName, teams, locked, lockAt, bracketMatchups, bracketOpen, bracketLocked, bracketSlotLocks }: Props) {
+export default function PicksEditor({ playerName, teams, locked, lockAt, bracketMatchups, bracketOpen, bracketLocked, bracketSlotLocks, bracketResolvedWinners }: Props) {
   const [part1, setPart1] = useState<Part1State>({
     champion_team_id: null,
     runnerup_team_id: null,
@@ -258,7 +259,7 @@ export default function PicksEditor({ playerName, teams, locked, lockAt, bracket
       {/* Bracket tab */}
       {tab === "bracket" &&
         (bracketOpen ? (
-          <BracketEditor matchups={bracketMatchups} teams={teams} locked={bracketLocked} slotLocks={bracketSlotLocks} />
+          <BracketEditor matchups={bracketMatchups} teams={teams} locked={bracketLocked} slotLocks={bracketSlotLocks} resolvedWinners={bracketResolvedWinners} />
         ) : (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
             <p className="text-2xl mb-2">🔒</p>
