@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { part12Locked } from "./auth";
 import { compareForLeaderboard, ScoreBreakdown, scorePlayer } from "./scoring";
+import { filterAutofilledPicks } from "./autofilled-picks";
 import type {
   Actuals,
   BracketPick,
@@ -43,8 +44,9 @@ export async function buildLeaderboard(): Promise<LeaderboardEntry[]> {
     const ranks = ((rankings.data ?? []) as GroupRankingRow[]).filter(
       (r) => r.player_id === player.id
     );
-    const bracket = ((brackets.data ?? []) as BracketPick[]).filter(
-      (b) => b.player_id === player.id
+    const bracket = filterAutofilledPicks(
+      player.id,
+      ((brackets.data ?? []) as BracketPick[]).filter((b) => b.player_id === player.id)
     );
     const bronze =
       (bronzes.data ?? []).find((b: any) => b.player_id === player.id)?.bronze_winner_team_id ??

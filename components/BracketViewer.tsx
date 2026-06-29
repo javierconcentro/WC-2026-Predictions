@@ -43,6 +43,8 @@ interface Props {
   bronze: number | null;
   actual: ActualRounds;
   bronzeWinnerActual: number | null;
+  // Slots that were auto-filled (not entered by the player) — shown in grey, no pts.
+  excludedSlots?: string[];
 }
 
 type BoxMode = "normal" | "final" | "bronze";
@@ -54,6 +56,7 @@ export default function BracketViewer({
   bronze,
   actual,
   bronzeWinnerActual,
+  excludedSlots = [],
 }: Props) {
   const teamMeta = new Map(teams.map((t) => [t.id, t]));
   const nameOf = (id: number | null | undefined) => {
@@ -156,7 +159,10 @@ export default function BracketViewer({
     ];
   };
 
-  const pickedScores = (round: string, teamId: number): boolean => {
+  const excluded = new Set(excludedSlots);
+
+  const pickedScores = (round: string, teamId: number, slot: string): boolean => {
+    if (excluded.has(slot)) return false;
     const reach = ROUND_REACH[round];
     return !!reach && actualSets[reach].has(teamId);
   };
@@ -174,7 +180,7 @@ export default function BracketViewer({
           : "bg-slate-50 font-semibold text-slate-500";
       }
       const round = slot.split("-")[0];
-      return pickedScores(round, id)
+      return pickedScores(round, id, slot)
         ? GREEN
         : "bg-slate-50 font-semibold text-slate-500";
     }
@@ -267,10 +273,11 @@ export default function BracketViewer({
     );
   };
 
-  // Total Part 3 bracket points for this set of picks.
+  // Total Part 3 bracket points for this set of picks (auto-filled slots excluded).
   const bracketPts = (() => {
     let pts = 0;
     for (const [slot, teamId] of Object.entries(picks)) {
+      if (excluded.has(slot)) continue;
       const round = slot.split("-")[0];
       const reach = ROUND_REACH[round];
       if (reach && actualSets[reach].has(teamId)) {

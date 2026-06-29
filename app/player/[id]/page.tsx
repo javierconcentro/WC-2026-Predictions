@@ -5,6 +5,7 @@ import { GROUPS, POINTS } from "@/lib/types";
 import type { Actuals, GroupRankingRow, Part1Picks, StandingRow, Team } from "@/lib/types";
 import { r32FromFixtures, r32ResolvedWinners } from "@/lib/bracket";
 import { actualRoundMembers } from "@/lib/scoring";
+import { autofilledSlotsFor } from "@/lib/autofilled-picks";
 import BracketViewer from "@/components/BracketViewer";
 
 export const dynamic = "force-dynamic";
@@ -229,6 +230,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             bronze={bronzeTeamId}
             actual={actualRounds}
             bronzeWinnerActual={(actualsRow as Actuals | null)?.bronze_winner_team_id ?? null}
+            excludedSlots={autofilledSlotsFor(id)}
           />
         )}
       </section>
