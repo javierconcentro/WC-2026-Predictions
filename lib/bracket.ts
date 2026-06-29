@@ -78,22 +78,41 @@ export const R32_SLOT_LOCKS: Record<string, string> = {
   "R32-1": "2026-06-28T19:00:00Z", // South Africa vs Canada — locks at kickoff (Sun 3pm ET)
 };
 
-// Each R32 match locks at its own kickoff (slot -> ISO time), ordered by
-// kickoff so slot R32-1 is the earliest match. Page and API both derive locks
-// this way so they agree.
-export function r32SlotLocks(fixtures: { kickoff_utc: string }[]): Record<string, string> {
-  const sorted = [...fixtures]
-    .sort((a, b) => Date.parse(a.kickoff_utc) - Date.parse(b.kickoff_utc))
-    .slice(0, 16);
+// Official bracket order: each R32 slot's kickoff (UTC), taken from the source
+// bracket. Used to map bracket positions to real fixtures (by kickoff) so the
+// halves/sides match the official draw — e.g. Spain (slot 7, left) is opposite
+// Argentina (slot 16, right). Each slot also locks at this time.
+const R32_SLOT_KICKOFFS: string[] = [
+  "2026-06-28T19:00:00Z", // 1  South Africa vs Canada
+  "2026-06-30T01:00:00Z", // 2  Netherlands vs Morocco
+  "2026-06-29T20:30:00Z", // 3  Germany vs Paraguay
+  "2026-06-30T21:00:00Z", // 4  France vs Sweden
+  "2026-07-01T20:00:00Z", // 5  Belgium vs Senegal
+  "2026-07-02T00:00:00Z", // 6  USA vs Bosnia-Herzegovina
+  "2026-07-02T19:00:00Z", // 7  Spain vs Austria
+  "2026-07-02T23:00:00Z", // 8  Portugal vs Croatia
+  "2026-06-29T17:00:00Z", // 9  Brazil vs Japan
+  "2026-06-30T17:00:00Z", // 10 Ivory Coast vs Norway
+  "2026-07-01T01:00:00Z", // 11 Mexico vs Ecuador
+  "2026-07-01T16:00:00Z", // 12 England vs Congo DR
+  "2026-07-03T03:00:00Z", // 13 Switzerland vs Algeria
+  "2026-07-04T01:30:00Z", // 14 Colombia vs Ghana
+  "2026-07-03T18:00:00Z", // 15 Australia vs Egypt
+  "2026-07-03T22:00:00Z", // 16 Argentina vs Cape Verde Islands
+];
+
+// Each R32 slot locks at its own kickoff. Page and API both call this so they
+// agree on slot numbering and lock times.
+export function r32SlotLocks(): Record<string, string> {
   const locks: Record<string, string> = {};
-  sorted.forEach((f, i) => {
-    if (f.kickoff_utc) locks[`R32-${i + 1}`] = f.kickoff_utc;
+  R32_SLOT_KICKOFFS.forEach((t, i) => {
+    locks[`R32-${i + 1}`] = t;
   });
   return locks;
 }
 
-// Build the bracket's Round-of-32 from the real fixtures (all 32 teams), plus
-// per-match lock times. Ordered by kickoff so the earliest game is R32-1.
+// Build the bracket's Round-of-32 from the real fixtures (all 32 teams) in the
+// official slot order, by matching each slot's kickoff to its fixture.
 export function r32FromFixtures(
   fixtures: Fixture[],
   teams: Team[]
@@ -104,15 +123,16 @@ export function r32FromFixtures(
     const t = teamById.get(id);
     return t ? { id: t.id, name: t.name, code: t.code ?? null } : null;
   };
-  const sorted = [...fixtures]
-    .sort((a, b) => Date.parse(a.kickoff_utc) - Date.parse(b.kickoff_utc))
-    .slice(0, 16);
-  const matchups: Matchup[] = sorted.map((f, i) => ({
-    slot: `R32-${i + 1}`,
-    a: seed(f.home_team_id),
-    b: seed(f.away_team_id),
-  }));
-  return { matchups, slotLocks: r32SlotLocks(fixtures) };
+  const byKickoff = new Map(fixtures.map((f) => [Date.parse(f.kickoff_utc), f]));
+  const matchups: Matchup[] = R32_SLOT_KICKOFFS.map((t, i) => {
+    const f = byKickoff.get(Date.parse(t));
+    return {
+      slot: `R32-${i + 1}`,
+      a: f ? seed(f.home_team_id) : null,
+      b: f ? seed(f.away_team_id) : null,
+    };
+  });
+  return { matchups, slotLocks: r32SlotLocks() };
 }
 
 export function fixedR32Matchups(teams: Team[]): Matchup[] {

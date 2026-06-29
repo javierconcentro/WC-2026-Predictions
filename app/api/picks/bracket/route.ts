@@ -34,10 +34,8 @@ export async function POST(req: NextRequest) {
   // Slots whose individual lock time has already passed can't be changed —
   // preserve whatever's in the DB for them regardless of what the client sends.
   const now = Date.now();
-  const { data: r32 } = await supabase.from("fixtures").select("kickoff_utc").eq("stage", "R32");
-  const slotLockMap = r32SlotLocks((r32 ?? []) as { kickoff_utc: string }[]);
   const lockedSlots = new Set(
-    Object.entries(slotLockMap)
+    Object.entries(r32SlotLocks())
       .filter(([, t]) => now >= Date.parse(t))
       .map(([slot]) => slot)
   );
