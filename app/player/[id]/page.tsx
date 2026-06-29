@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { currentPlayer, getConfig, part12Locked, bracketLocked } from "@/lib/auth";
 import { GROUPS, POINTS } from "@/lib/types";
 import type { Actuals, GroupRankingRow, Part1Picks, StandingRow, Team } from "@/lib/types";
+import { r32FromFixtures, r32ResolvedWinners } from "@/lib/bracket";
+import { actualRoundMembers } from "@/lib/scoring";
+import BracketViewer from "@/components/BracketViewer";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +44,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     { data: bronze },
     { data: actualsRow },
     { data: standingsRows },
+    { data: fixturesData },
   ] = await Promise.all([
     supabase.from("part1_picks").select("*").eq("player_id", id).maybeSingle(),
     supabase.from("group_rankings").select("*").eq("player_id", id),
@@ -49,6 +53,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     supabase.from("bronze_picks").select("*").eq("player_id", id).maybeSingle(),
     supabase.from("actuals").select("*").eq("id", 1).maybeSingle(),
     supabase.from("standings").select("*"),
+    supabase.from("fixtures").select("*"),
   ]);
 
   const teamName = (tid: number | null | undefined) =>
@@ -108,6 +113,26 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const actualPosOf = new Map<number, number>(); // team_id -> its current standing position
   for (const s of standings) actualPosOf.set(s.team_id, s.position);
   const posPoints = [0, POINTS.part2.pos1, POINTS.part2.pos2, POINTS.part2.pos3, POINTS.part2.pos4];
+
+  // Build bracket viewer data (only consumed when the bracket section renders).
+  const { matchups } = r32FromFixtures(fixturesData ?? [], teams as Team[] ?? []);
+  const resolvedWinners = r32ResolvedWinners(fixturesData ?? []);
+  const bracketPicksMap: Record<string, number> = {};
+  for (const b of (bracket ?? []) as { slot: string; picked_team_id: number }[]) {
+    bracketPicksMap[b.slot] = b.picked_team_id;
+  }
+  // Pre-fill blank finished R32 slots with the actual winner (mirrors BracketEditor load behaviour).
+  for (const [slot, winnerId] of Object.entries(resolvedWinners)) {
+    if (bracketPicksMap[slot] == null) bracketPicksMap[slot] = winnerId;
+  }
+  const bronzeTeamId = (bronze as { bronze_winner_team_id?: number } | null)?.bronze_winner_team_id ?? null;
+  const roundMembers = actualRoundMembers(fixturesData ?? []);
+  const actualRounds = {
+    R16: [...roundMembers.R16],
+    QF: [...roundMembers.QF],
+    SF: [...roundMembers.SF],
+    F: [...roundMembers.F],
+  };
 
   return (
     <div className="space-y-5">
@@ -187,29 +212,24 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Bracket
         </h3>
         {!isMe && !bracketLocked(cfg) ? (
           <p className="text-sm text-slate-400">
-            Hidden until the bracket locks (Mon 1pm) so nobody can copy.
+            Hidden until the bracket locks so nobody can copy.
           </p>
         ) : (bracket ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400">Bracket opens when the group stage finishes.</p>
+          <p className="text-sm text-slate-400">No bracket picks submitted.</p>
         ) : (
-          <div className="space-y-1 text-sm">
-            {(bracket ?? []).map((b: any) => (
-              <p key={b.slot}>
-                <span className="text-slate-400">{b.slot}:</span> {teamName(b.picked_team_id)}
-              </p>
-            ))}
-            {bronze && (
-              <p>
-                <span className="text-slate-400">Bronze:</span>{" "}
-                {teamName((bronze as any).bronze_winner_team_id)}
-              </p>
-            )}
-          </div>
+          <BracketViewer
+            matchups={matchups}
+            teams={(teams as Team[]) ?? []}
+            picks={bracketPicksMap}
+            bronze={bronzeTeamId}
+            actual={actualRounds}
+            bronzeWinnerActual={(actualsRow as Actuals | null)?.bronze_winner_team_id ?? null}
+          />
         )}
       </section>
     </div>
