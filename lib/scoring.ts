@@ -74,8 +74,9 @@ export function scorePart2(
   return pts;
 }
 
-// Teams that actually reached each knockout round, derived from fixtures.
-// "Reached round R" = appears in a fixture of stage R with a known team id.
+// Teams that actually reached each knockout round, derived from finished
+// results in the PREVIOUS round — not from future fixtures appearing.
+// "Reached R16" = won a finished R32 match, etc.
 export function actualRoundMembers(fixtures: Fixture[]): Record<"R16" | "QF" | "SF" | "F", Set<number>> {
   const rounds: Record<"R16" | "QF" | "SF" | "F", Set<number>> = {
     R16: new Set(),
@@ -84,10 +85,11 @@ export function actualRoundMembers(fixtures: Fixture[]): Record<"R16" | "QF" | "
     F: new Set(),
   };
   for (const f of fixtures) {
-    if (f.stage === "R16" || f.stage === "QF" || f.stage === "SF" || f.stage === "F") {
-      if (f.home_team_id) rounds[f.stage].add(f.home_team_id);
-      if (f.away_team_id) rounds[f.stage].add(f.away_team_id);
-    }
+    if (f.status !== "finished" || !f.winner_team_id) continue;
+    if (f.stage === "R32") rounds.R16.add(f.winner_team_id);
+    else if (f.stage === "R16") rounds.QF.add(f.winner_team_id);
+    else if (f.stage === "QF") rounds.SF.add(f.winner_team_id);
+    else if (f.stage === "SF") rounds.F.add(f.winner_team_id);
   }
   return rounds;
 }
