@@ -100,9 +100,9 @@ export default function BracketViewer({
           const t = tgt.getBoundingClientRect();
           const sMidY = s.top - cRect.top + s.height / 2;
           const tMidY = t.top - cRect.top + t.height / 2;
-          const srcLeft = s.left + s.right < t.left + t.right;
-          const sx = (srcLeft ? s.right : s.left) - cRect.left;
-          const tx = (srcLeft ? t.left : t.right) - cRect.left;
+          // Linear layout: source is always to the left of target.
+          const sx = s.right - cRect.left;
+          const tx = t.left - cRect.left;
           const midX = (sx + tx) / 2;
           segs.push(
             `${sx},${sMidY} ${midX},${sMidY} ${midX},${tMidY} ${tx},${tMidY}`
@@ -186,23 +186,20 @@ export default function BracketViewer({
     );
   };
 
-  const sideMatches = (round: string, side: "left" | "right"): number[] => {
-    const total = ({ R32: 16, R16: 8, QF: 4, SF: 2 } as Record<string, number>)[round] ?? 0;
-    const half = total / 2;
-    const start = side === "left" ? 0 : half;
-    return Array.from({ length: half }, (_, k) => start + k);
+  // Render all matches for a round in a single column, left → right flow.
+  const allColumn = (round: string) => {
+    const count = ({ R32: 16, R16: 8, QF: 4, SF: 2 } as Record<string, number>)[round] ?? 0;
+    return (
+      <div key={round} className="flex flex-col">
+        <div className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+          {LABEL[round]}
+        </div>
+        <div className="flex flex-1 flex-col justify-around gap-1.5">
+          {Array.from({ length: count }, (_, i) => matchBox(round, i))}
+        </div>
+      </div>
+    );
   };
-
-  const column = (round: string, side: "left" | "right") => (
-    <div key={side + round} className="flex flex-col">
-      <div className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-        {LABEL[round]}
-      </div>
-      <div className="flex flex-1 flex-col justify-around gap-1.5">
-        {sideMatches(round, side).map((i) => matchBox(round, i))}
-      </div>
-    </div>
-  );
 
   // Bronze candidates = the two SF losers from the player's picks.
   const bronzeCandidates = (): [number | null, number | null] => {
@@ -283,10 +280,10 @@ export default function BracketViewer({
             ))}
           </svg>
           <div className="flex items-stretch gap-4">
-            {column("R32", "left")}
-            {column("R16", "left")}
-            {column("QF", "left")}
-            {column("SF", "left")}
+            {allColumn("R32")}
+            {allColumn("R16")}
+            {allColumn("QF")}
+            {allColumn("SF")}
 
             <div className="flex flex-col justify-center gap-2 px-0.5">
               <div className="text-center text-[10px] font-semibold uppercase tracking-wide text-amber-500">
@@ -298,11 +295,6 @@ export default function BracketViewer({
               </div>
               {bronzeBox()}
             </div>
-
-            {column("SF", "right")}
-            {column("QF", "right")}
-            {column("R16", "right")}
-            {column("R32", "right")}
           </div>
         </div>
       </div>
