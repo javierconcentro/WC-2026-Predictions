@@ -1,4 +1,4 @@
-import type { StandingRow, Team } from "./types";
+import type { Fixture, StandingRow, Team } from "./types";
 
 // Bracket seeding for the knockout stage. WC 2026: 32 teams reach the Round of
 // 32 = top 2 of each of the 12 groups (24) + the 8 best third-placed teams.
@@ -77,6 +77,43 @@ const R32_FIXED: [string | null, string | null][] = [
 export const R32_SLOT_LOCKS: Record<string, string> = {
   "R32-1": "2026-06-28T19:00:00Z", // South Africa vs Canada — locks at kickoff (Sun 3pm ET)
 };
+
+// Each R32 match locks at its own kickoff (slot -> ISO time), ordered by
+// kickoff so slot R32-1 is the earliest match. Page and API both derive locks
+// this way so they agree.
+export function r32SlotLocks(fixtures: { kickoff_utc: string }[]): Record<string, string> {
+  const sorted = [...fixtures]
+    .sort((a, b) => Date.parse(a.kickoff_utc) - Date.parse(b.kickoff_utc))
+    .slice(0, 16);
+  const locks: Record<string, string> = {};
+  sorted.forEach((f, i) => {
+    if (f.kickoff_utc) locks[`R32-${i + 1}`] = f.kickoff_utc;
+  });
+  return locks;
+}
+
+// Build the bracket's Round-of-32 from the real fixtures (all 32 teams), plus
+// per-match lock times. Ordered by kickoff so the earliest game is R32-1.
+export function r32FromFixtures(
+  fixtures: Fixture[],
+  teams: Team[]
+): { matchups: Matchup[]; slotLocks: Record<string, string> } {
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+  const seed = (id: number | null): SeedTeam | null => {
+    if (!id) return null;
+    const t = teamById.get(id);
+    return t ? { id: t.id, name: t.name, code: t.code ?? null } : null;
+  };
+  const sorted = [...fixtures]
+    .sort((a, b) => Date.parse(a.kickoff_utc) - Date.parse(b.kickoff_utc))
+    .slice(0, 16);
+  const matchups: Matchup[] = sorted.map((f, i) => ({
+    slot: `R32-${i + 1}`,
+    a: seed(f.home_team_id),
+    b: seed(f.away_team_id),
+  }));
+  return { matchups, slotLocks: r32SlotLocks(fixtures) };
+}
 
 export function fixedR32Matchups(teams: Team[]): Matchup[] {
   const byName = new Map(teams.map((t) => [t.name, t]));

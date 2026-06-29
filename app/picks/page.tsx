@@ -2,8 +2,8 @@ import { db, dbConfigured } from "@/lib/db";
 import { currentPlayer, getConfig, part12Locked, bracketOpen, bracketLocked } from "@/lib/auth";
 import JoinGate from "@/components/JoinGate";
 import PicksEditor from "@/components/PicksEditor";
-import { fixedR32Matchups, R32_SLOT_LOCKS } from "@/lib/bracket";
-import type { Team } from "@/lib/types";
+import { r32FromFixtures } from "@/lib/bracket";
+import type { Fixture, Team } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +19,14 @@ export default async function PicksPage() {
   const [player, cfg] = await Promise.all([currentPlayer(), getConfig()]);
   if (!player) return <JoinGate />;
 
-  const { data: teams } = await db().from("teams").select("*").order("name");
+  const supabase = db();
+  const [{ data: teams }, { data: r32 }] = await Promise.all([
+    supabase.from("teams").select("*").order("name"),
+    supabase.from("fixtures").select("*").eq("stage", "R32"),
+  ]);
   const locked = part12Locked(cfg);
 
-  const matchups = fixedR32Matchups((teams ?? []) as Team[]);
+  const { matchups, slotLocks } = r32FromFixtures((r32 ?? []) as Fixture[], (teams ?? []) as Team[]);
 
   return (
     <PicksEditor
@@ -33,7 +37,7 @@ export default async function PicksPage() {
       bracketMatchups={matchups}
       bracketOpen={bracketOpen(cfg)}
       bracketLocked={bracketLocked(cfg)}
-      bracketSlotLocks={R32_SLOT_LOCKS}
+      bracketSlotLocks={slotLocks}
     />
   );
 }
