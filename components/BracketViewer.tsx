@@ -62,11 +62,15 @@ export default function BracketViewer({
     return SHORT_NAME[full] ?? full;
   };
 
+  // Live state — seeded from server props, refreshed by polling.
+  const [liveActual, setLiveActual] = useState<ActualRounds>(actual);
+  const [liveBronzeWinner, setLiveBronzeWinner] = useState<number | null>(bronzeWinnerActual);
+
   const actualSets: Record<"R16" | "QF" | "SF" | "F", Set<number>> = {
-    R16: new Set(actual.R16),
-    QF: new Set(actual.QF),
-    SF: new Set(actual.SF),
-    F: new Set(actual.F),
+    R16: new Set(liveActual.R16),
+    QF: new Set(liveActual.QF),
+    SF: new Set(liveActual.SF),
+    F: new Set(liveActual.F),
   };
 
   // SVG connector lines — same approach as BracketEditor, measured from DOM.
@@ -117,6 +121,25 @@ export default function BracketViewer({
     return () => window.removeEventListener("resize", recompute);
   }, []);
 
+  // Poll for updated actual round members every 2 minutes so scoring
+  // (green highlights + bracket pts) updates as games finish.
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/bracket-actuals", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        setLiveActual({ R16: data.R16, QF: data.QF, SF: data.SF, F: data.F });
+        setLiveBronzeWinner(data.bronzeWinner ?? null);
+      } catch {
+        // silently ignore — stale data is fine
+      }
+    };
+    poll(); // fetch immediately on mount in case server data is already stale
+    const id = setInterval(poll, 2 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const participants = (
     roundKey: string,
     i: number
@@ -146,7 +169,7 @@ export default function BracketViewer({
     }
     if (id != null && picked === id) {
       if (mode === "bronze") {
-        return bronzeWinnerActual && id === bronzeWinnerActual
+        return liveBronzeWinner && id === liveBronzeWinner
           ? BRONZE_CLS
           : "bg-slate-50 font-semibold text-slate-500";
       }
@@ -254,7 +277,7 @@ export default function BracketViewer({
         pts += ROUND_PTS[round] ?? 0;
       }
     }
-    if (bronze && bronzeWinnerActual && bronze === bronzeWinnerActual) pts += 10;
+    if (bronze && liveBronzeWinner && bronze === liveBronzeWinner) pts += 10;
     return pts;
   })();
 
