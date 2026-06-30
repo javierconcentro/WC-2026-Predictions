@@ -139,14 +139,18 @@ export default function LiveGames() {
         const isOpen = expanded === f.id;
         const kickoff = new Date(f.kickoff_utc);
         return (
-          <div key={f.id} ref={isAnchor ? anchorRef : undefined} className="scroll-mt-28">
+          <div
+            key={f.id}
+            ref={isAnchor ? anchorRef : undefined}
+            className={`scroll-mt-28 overflow-hidden rounded-xl border bg-white shadow-sm transition-colors ${
+              f.status === "live"
+                ? "border-emerald-500 ring-1 ring-emerald-400"
+                : "border-slate-200"
+            }`}
+          >
             <button
               onClick={() => setExpanded(isOpen ? null : f.id)}
-              className={`w-full rounded-xl border bg-white p-3 text-left shadow-sm transition-colors ${
-                f.status === "live"
-                  ? "border-emerald-500 ring-1 ring-emerald-400"
-                  : "border-slate-200 hover:border-[#101828]/40"
-              }`}
+              className="block w-full p-3 text-left transition-colors hover:bg-slate-50"
             >
               <div className="flex items-center justify-between text-xs text-slate-400">
                 <span>
@@ -224,7 +228,7 @@ function ExpandedGame({
       .sort((a, b) => a.position - b.position);
     const teamById = new Map(feed.teams.map((t) => [t.id, t]));
     return (
-      <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className="border-t border-slate-100 bg-slate-50/60 p-3">
         <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
           Group {fixture.group_letter} table
         </p>
@@ -279,14 +283,14 @@ function KnockoutVoters({
 }) {
   if (!preds) {
     return (
-      <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-400">
+      <div className="border-t border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-400">
         Loading predictions…
       </div>
     );
   }
   if (!slot) {
     return (
-      <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-400">
+      <div className="border-t border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-400">
         Picks will appear once this matchup is decided by the previous round.
       </div>
     );
@@ -324,43 +328,10 @@ function KnockoutVoters({
   const winner = fixture.status === "finished" ? fixture.winner_team_id : null;
   const isAwardGame = fixture.stage === "F" || fixture.stage === "bronze";
 
-  const Column = ({
-    flag,
-    title,
-    voters,
-    won,
-  }: {
-    flag: string | null;
-    title: string;
-    voters: Voter[];
-    won: boolean;
-  }) => (
-    <div className="min-w-0">
-      <div className="mb-1.5 flex items-center gap-1 border-b border-slate-200 pb-1">
-        {flag && <img src={flag} alt="" className="h-3 w-auto rounded-[2px] shrink-0" />}
-        <span className="truncate text-xs font-semibold text-slate-600">{title}</span>
-      </div>
-      {voters.length === 0 ? (
-        <p className="text-xs text-slate-300">—</p>
-      ) : (
-        <ul className="space-y-0.5">
-          {voters.map((v) => (
-            <li
-              key={v.name}
-              className={`text-xs leading-tight ${won ? "font-semibold text-emerald-600" : "text-slate-600"}`}
-            >
-              {v.name}{" "}
-              <span className={won ? "text-emerald-500" : "text-slate-400"}>({v.country})</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-
-  // When both teams are set, split into Country 1 / Other / Country 2. When the
-  // matchup isn't decided yet (future deep round), there's no Country 1/2 — show
-  // every pick grouped by the country each person chose for this match.
+  // Names only for the two teams in the match (the card above already names
+  // them); the winning side turns green. The middle column holds everyone who
+  // picked a team that isn't playing this match — shown in light grey with the
+  // team they actually picked, since that one isn't obvious.
   let body: ReactNode;
   if (home && away) {
     const homeVoters: Voter[] = [];
@@ -377,24 +348,45 @@ function KnockoutVoters({
     homeVoters.sort(byName);
     awayVoters.sort(byName);
     otherVoters.sort(byName);
+
+    const side = (voters: Voter[], won: boolean, align: "left" | "right") =>
+      voters.length === 0 ? (
+        <p className={`text-xs text-slate-300 ${align === "right" ? "text-right" : ""}`}>—</p>
+      ) : (
+        <ul className="space-y-0.5">
+          {voters.map((v) => (
+            <li
+              key={v.name}
+              className={`text-xs leading-tight ${align === "right" ? "text-right" : ""} ${
+                won ? "font-semibold text-emerald-600" : "text-slate-600"
+              }`}
+            >
+              {v.name}
+            </li>
+          ))}
+        </ul>
+      );
+
     body = (
       <div className="grid grid-cols-3 items-start gap-2">
-        <Column
-          flag={teamFlag(home)}
-          title={teamName(home)}
-          voters={homeVoters}
-          won={winner != null && winner === home}
-        />
-        <Column flag={null} title="Other pick" voters={otherVoters} won={false} />
-        <Column
-          flag={teamFlag(away)}
-          title={teamName(away)}
-          voters={awayVoters}
-          won={winner != null && winner === away}
-        />
+        {side(homeVoters, winner != null && winner === home, "left")}
+        {otherVoters.length === 0 ? (
+          <p className="text-center text-xs text-slate-300">—</p>
+        ) : (
+          <ul className="space-y-0.5">
+            {otherVoters.map((v) => (
+              <li key={v.name} className="text-center text-xs leading-tight text-slate-400">
+                {v.name} <span className="text-slate-300">({v.country})</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {side(awayVoters, winner != null && winner === away, "right")}
       </div>
     );
   } else {
+    // Matchup not decided yet — no Country 1/2 to align to, so group every pick
+    // by the chosen country (these keep a label, since the card shows TBD).
     const byCountry = new Map<number, Voter[]>();
     for (const p of preds.players) {
       const pick = pickOf(p.id);
@@ -409,23 +401,33 @@ function KnockoutVoters({
       groups.length === 0 ? (
         <p className="text-xs text-slate-400">No picks for this match yet.</p>
       ) : (
-        <div className="grid grid-cols-2 items-start gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-2 items-start gap-x-3 gap-y-2 sm:grid-cols-3">
           {groups.map(([teamId, voters]) => (
-            <Column
-              key={teamId}
-              flag={teamFlag(teamId)}
-              title={teamName(teamId)}
-              voters={voters.sort(byName)}
-              won={false}
-            />
+            <div key={teamId} className="min-w-0">
+              <div className="mb-1 flex items-center gap-1">
+                {teamFlag(teamId) && (
+                  <img src={teamFlag(teamId)!} alt="" className="h-3 w-auto rounded-[2px] shrink-0" />
+                )}
+                <span className="truncate text-xs font-semibold text-slate-600">
+                  {teamName(teamId)}
+                </span>
+              </div>
+              <ul className="space-y-0.5">
+                {voters.sort(byName).map((v) => (
+                  <li key={v.name} className="text-xs leading-tight text-slate-600">
+                    {v.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
         </div>
       );
   }
 
   return (
-    <div className="mt-1 space-y-2">
-      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">{body}</div>
+    <div className="space-y-3 border-t border-slate-100 bg-slate-50/60 p-3">
+      {body}
       {isAwardGame && <ExtraAwards feed={feed} preds={preds} />}
     </div>
   );
@@ -468,7 +470,7 @@ function ExtraAwards({ feed, preds }: { feed: Feed; preds: Predictions }) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="border-t border-slate-200 pt-2.5">
       <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
         Extra awards
       </p>
