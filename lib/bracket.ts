@@ -157,6 +157,61 @@ export function fixedR32Matchups(teams: Team[]): Matchup[] {
   return R32_FIXED.map(([a, b], i) => ({ slot: `R32-${i + 1}`, a: seed(a), b: seed(b) }));
 }
 
+// Map each knockout fixture to its bracket slot. R32 binds by kickoff (the
+// canonical slot order). R16/QF/SF bind by matching a fixture's two teams to
+// the actual winners feeding that slot in the bracket tree, so a player's pick
+// for that slot lines up with the real matchup. Final and the third-place game
+// are unique per tournament, so they bind directly by stage.
+//
+// A round only resolves once its feeding round has finished — a future R16+
+// game (teams still TBD) won't be bound until the prior round decides it. R32
+// games always bind (the matchups are fixed), so future R32 games work too.
+export function knockoutFixtureSlots(fixtures: Fixture[]): Map<number, string> {
+  const out = new Map<number, string>();
+  const byKickoff = new Map(fixtures.map((f) => [Date.parse(f.kickoff_utc), f]));
+  const winnerBySlot: Record<string, number | null> = {};
+
+  R32_SLOT_KICKOFFS.forEach((t, i) => {
+    const slot = `R32-${i + 1}`;
+    const f = byKickoff.get(Date.parse(t));
+    if (f) out.set(f.id, slot);
+    winnerBySlot[slot] = f && f.status === "finished" ? f.winner_team_id : null;
+  });
+
+  const bindRound = (stage: string, count: number, prefix: string, feeder: string) => {
+    const roundFixtures = fixtures.filter((f) => f.stage === stage);
+    for (let k = 1; k <= count; k++) {
+      const slot = `${prefix}-${k}`;
+      const a = winnerBySlot[`${feeder}-${2 * k - 1}`];
+      const b = winnerBySlot[`${feeder}-${2 * k}`];
+      let winner: number | null = null;
+      if (a && b) {
+        const f = roundFixtures.find(
+          (x) =>
+            (x.home_team_id === a && x.away_team_id === b) ||
+            (x.home_team_id === b && x.away_team_id === a)
+        );
+        if (f) {
+          out.set(f.id, slot);
+          winner = f.status === "finished" ? f.winner_team_id : null;
+        }
+      }
+      winnerBySlot[slot] = winner;
+    }
+  };
+
+  bindRound("R16", 8, "R16", "R32");
+  bindRound("QF", 4, "QF", "R16");
+  bindRound("SF", 2, "SF", "QF");
+
+  for (const f of fixtures) {
+    if (f.stage === "F") out.set(f.id, "F");
+    else if (f.stage === "bronze") out.set(f.id, "bronze");
+  }
+
+  return out;
+}
+
 export function r32Matchups(seeds: SeedTeam[]): Matchup[] {
   const matchups: Matchup[] = [];
   const half = Math.floor(seeds.length / 2);

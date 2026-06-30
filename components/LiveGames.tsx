@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Fixture, StandingRow, Team } from "@/lib/types";
 import { flagUrl } from "@/lib/flags";
+import { knockoutFixtureSlots } from "@/lib/bracket";
 
 const POLL_MS = 30_000;
 
@@ -10,6 +11,13 @@ interface Feed {
   fixtures: Fixture[];
   standings: StandingRow[];
   teams: Team[];
+}
+
+interface Predictions {
+  players: { id: string; name: string }[];
+  bracketPicks: { player_id: string; slot: string; picked_team_id: number }[];
+  champPicks: { player_id: string; champion_team_id: number | null }[];
+  bronzePicks: { player_id: string; bronze_winner_team_id: number | null }[];
 }
 
 function liveMinute(kickoffUtc: string): string {
@@ -33,10 +41,25 @@ const STAGE_LABEL: Record<string, string> = {
 
 export default function LiveGames() {
   const [feed, setFeed] = useState<Feed | null>(null);
+  const [preds, setPreds] = useState<Predictions | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const scrolledOnce = useRef(false);
+
+  // Predictions are fixed (bracket is locked) — fetch once, no polling.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/predictions")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (alive && data) setPreds(data as Predictions);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -98,6 +121,8 @@ export default function LiveGames() {
     feed.fixtures.find((f) => f.status === "live")?.id ??
     feed.fixtures.find((f) => f.status === "scheduled")?.id;
 
+  const slotByFixture = knockoutFixtureSlots(feed.fixtures);
+
   return (
     <div className="space-y-2">
       {feed.fixtures.map((f) => {
@@ -158,7 +183,14 @@ export default function LiveGames() {
                 </p>
               )}
             </button>
-            {isOpen && <ExpandedGame fixture={f} feed={feed} />}
+            {isOpen && (
+              <ExpandedGame
+                fixture={f}
+                feed={feed}
+                preds={preds}
+                slot={slotByFixture.get(f.id) ?? null}
+              />
+            )}
           </div>
         );
       })}
@@ -166,7 +198,17 @@ export default function LiveGames() {
   );
 }
 
-function ExpandedGame({ fixture, feed }: { fixture: Fixture; feed: Feed }) {
+function ExpandedGame({
+  fixture,
+  feed,
+  preds,
+  slot,
+}: {
+  fixture: Fixture;
+  feed: Feed;
+  preds: Predictions | null;
+  slot: string | null;
+}) {
   if (fixture.stage === "group" && fixture.group_letter) {
     const rows = feed.standings
       .filter((s) => s.group_letter === fixture.group_letter)
@@ -206,10 +248,140 @@ function ExpandedGame({ fixture, feed }: { fixture: Fixture; feed: Feed }) {
       </div>
     );
   }
-  // Knockout: per-player predicted winners (lands with the bracket feature).
+  // Knockout: who picked each team to win this matchup.
+  return <KnockoutVoters fixture={fixture} feed={feed} preds={preds} slot={slot} />;
+}
+
+interface Voter {
+  name: string;
+  country: string;
+}
+
+function KnockoutVoters({
+  fixture,
+  feed,
+  preds,
+  slot,
+}: {
+  fixture: Fixture;
+  feed: Feed;
+  preds: Predictions | null;
+  slot: string | null;
+}) {
+  if (!preds) {
+    return (
+      <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-400">
+        Loading predictions…
+      </div>
+    );
+  }
+  if (!slot) {
+    return (
+      <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-400">
+        Picks will appear once this matchup is decided by the previous round.
+      </div>
+    );
+  }
+
+  const teamById = new Map(feed.teams.map((t) => [t.id, t]));
+  const teamName = (id: number | null) =>
+    (id && teamById.get(id)?.name) || "Unknown";
+  const teamFlag = (id: number | null) => {
+    if (!id) return null;
+    const t = teamById.get(id);
+    return flagUrl(t?.code, t?.name);
+  };
+
+  const home = fixture.home_team_id;
+  const away = fixture.away_team_id;
+
+  const pickOf = (playerId: string): number | null => {
+    if (slot === "F") {
+      return (
+        preds.champPicks.find((c) => c.player_id === playerId)?.champion_team_id ?? null
+      );
+    }
+    if (slot === "bronze") {
+      return (
+        preds.bronzePicks.find((c) => c.player_id === playerId)?.bronze_winner_team_id ??
+        null
+      );
+    }
+    return (
+      preds.bracketPicks.find((b) => b.player_id === playerId && b.slot === slot)
+        ?.picked_team_id ?? null
+    );
+  };
+
+  const homeVoters: Voter[] = [];
+  const awayVoters: Voter[] = [];
+  const otherVoters: Voter[] = [];
+  for (const p of preds.players) {
+    const pick = pickOf(p.id);
+    if (pick == null) continue;
+    const entry: Voter = { name: p.name, country: teamName(pick) };
+    if (pick === home) homeVoters.push(entry);
+    else if (pick === away) awayVoters.push(entry);
+    else otherVoters.push(entry);
+  }
+  const byName = (a: Voter, b: Voter) => a.name.localeCompare(b.name);
+  homeVoters.sort(byName);
+  awayVoters.sort(byName);
+  otherVoters.sort(byName);
+
+  const winner = fixture.status === "finished" ? fixture.winner_team_id : null;
+
+  const Column = ({
+    flag,
+    title,
+    voters,
+    won,
+  }: {
+    flag: string | null;
+    title: string;
+    voters: Voter[];
+    won: boolean;
+  }) => (
+    <div className="min-w-0">
+      <div className="mb-1.5 flex items-center gap-1 border-b border-slate-200 pb-1">
+        {flag && <img src={flag} alt="" className="h-3 w-auto rounded-[2px] shrink-0" />}
+        <span className="truncate text-xs font-semibold text-slate-600">{title}</span>
+      </div>
+      {voters.length === 0 ? (
+        <p className="text-xs text-slate-300">—</p>
+      ) : (
+        <ul className="space-y-0.5">
+          {voters.map((v) => (
+            <li
+              key={v.name}
+              className={`text-xs leading-tight ${won ? "font-semibold text-emerald-600" : "text-slate-600"}`}
+            >
+              {v.name}{" "}
+              <span className={won ? "text-emerald-500" : "text-slate-400"}>({v.country})</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
   return (
-    <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
-      Player predictions for knockout games will appear here once brackets are in.
+    <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className="grid grid-cols-3 items-start gap-2">
+        <Column
+          flag={teamFlag(home)}
+          title={teamName(home)}
+          voters={homeVoters}
+          won={winner != null && winner === home}
+        />
+        <Column flag={null} title="Other pick" voters={otherVoters} won={false} />
+        <Column
+          flag={teamFlag(away)}
+          title={teamName(away)}
+          voters={awayVoters}
+          won={winner != null && winner === away}
+        />
+      </div>
     </div>
   );
 }
