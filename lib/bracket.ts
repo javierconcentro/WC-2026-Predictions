@@ -166,20 +166,26 @@ export function fixedR32Matchups(teams: Team[]): Matchup[] {
 // don't need a time here.
 export const KO_SLOT_KICKOFFS: Record<string, string> = {
   ...Object.fromEntries(R32_SLOT_KICKOFFS.map((t, i) => [`R32-${i + 1}`, t])),
-  "R16-1": "2026-07-04T21:00:00Z", // Philadelphia       (feeds from R32-3 + R32-4)
-  "R16-2": "2026-07-04T17:00:00Z", // Houston            (R32-1 + R32-2)
-  "R16-3": "2026-07-05T20:00:00Z", // East Rutherford NJ (R32-9 + R32-10)
-  "R16-4": "2026-07-06T00:00:00Z", // Mexico City        (R32-11 + R32-12)
-  "R16-5": "2026-07-06T19:00:00Z", // Arlington TX       (R32-7 + R32-8)
-  "R16-6": "2026-07-07T00:00:00Z", // Seattle            (R32-5 + R32-6)
-  "R16-7": "2026-07-07T16:00:00Z", // Atlanta            (R32-15 + R32-16)
-  "R16-8": "2026-07-07T20:00:00Z", // Vancouver          (R32-13 + R32-14)
-  "QF-1": "2026-07-09T20:00:00Z", // Foxborough/Boston   (R16-1 + R16-2)
-  "QF-2": "2026-07-10T19:00:00Z", // Inglewood/LA        (R16-5 + R16-6)
-  "QF-3": "2026-07-11T21:00:00Z", // Miami               (R16-3 + R16-4)
-  "QF-4": "2026-07-12T01:00:00Z", // Kansas City         (R16-7 + R16-8)
-  "SF-1": "2026-07-14T19:00:00Z", // Arlington TX        (QF-1 + QF-2)
-  "SF-2": "2026-07-15T19:00:00Z", // Atlanta             (QF-3 + QF-4)
+  // Editor numbers R16 slots sequentially by R32 order (R16-k <- R32-(2k-1) +
+  // R32-(2k)); picks are stored under those names. The physical schedule labels
+  // the games differently, so each kickoff is matched to the editor slot whose
+  // REGION it is, not the venue's printed game number.
+  "R16-1": "2026-07-04T17:00:00Z", // Houston          (R32-1 + R32-2:  SA/Canada · Neth/Morocco)
+  "R16-2": "2026-07-04T21:00:00Z", // Philadelphia     (R32-3 + R32-4:  Germany/Paraguay · France/Sweden)
+  "R16-3": "2026-07-07T00:00:00Z", // Seattle          (R32-5 + R32-6:  Belgium/Senegal · USA/Bosnia)
+  "R16-4": "2026-07-06T19:00:00Z", // Arlington TX     (R32-7 + R32-8:  Spain/Austria · Portugal/Croatia)
+  "R16-5": "2026-07-05T20:00:00Z", // East Rutherford  (R32-9 + R32-10: Brazil/Japan · Ivory Coast/Norway)
+  "R16-6": "2026-07-06T00:00:00Z", // Mexico City      (R32-11 + R32-12: Mexico/Ecuador · England/DR Congo)
+  "R16-7": "2026-07-07T20:00:00Z", // Vancouver        (R32-13 + R32-14: Switzerland/Algeria · Colombia/Ghana)
+  "R16-8": "2026-07-07T16:00:00Z", // Atlanta          (R32-15 + R32-16: Australia/Egypt · Argentina/Cape Verde)
+  // QF/SF physical numbering coincides with the editor's (each region is the
+  // same set either way), so these map straight through.
+  "QF-1": "2026-07-09T20:00:00Z", // Foxborough/Boston (R16-1 + R16-2: R32-1..4)
+  "QF-2": "2026-07-10T19:00:00Z", // Inglewood/LA      (R16-3 + R16-4: R32-5..8)
+  "QF-3": "2026-07-11T21:00:00Z", // Miami             (R16-5 + R16-6: R32-9..12)
+  "QF-4": "2026-07-12T01:00:00Z", // Kansas City       (R16-7 + R16-8: R32-13..16)
+  "SF-1": "2026-07-14T19:00:00Z", // Arlington TX      (QF-1 + QF-2: R32-1..8)
+  "SF-2": "2026-07-15T19:00:00Z", // Atlanta           (QF-3 + QF-4: R32-9..16)
 };
 
 // Map each knockout fixture to its bracket slot. Every scheduled slot (R32 /
