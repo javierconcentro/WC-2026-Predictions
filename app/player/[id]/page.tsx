@@ -177,6 +177,29 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Bracket
+        </h3>
+        {!isMe && !bracketLocked(cfg) ? (
+          <p className="text-sm text-slate-400">
+            Hidden until the bracket locks so nobody can copy.
+          </p>
+        ) : (bracket ?? []).length === 0 ? (
+          <p className="text-sm text-slate-400">No bracket picks submitted.</p>
+        ) : (
+          <BracketViewer
+            matchups={matchups}
+            teams={(teams as Team[]) ?? []}
+            picks={bracketPicksMap}
+            bronze={bronzeTeamId}
+            actual={actualRounds}
+            bronzeWinnerActual={(actualsRow as Actuals | null)?.bronze_winner_team_id ?? null}
+            excludedSlots={autofilledSlotsFor(id)}
+          />
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
           Group rankings
         </h3>
@@ -223,29 +246,6 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
               );
             })}
           </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Bracket
-        </h3>
-        {!isMe && !bracketLocked(cfg) ? (
-          <p className="text-sm text-slate-400">
-            Hidden until the bracket locks so nobody can copy.
-          </p>
-        ) : (bracket ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400">No bracket picks submitted.</p>
-        ) : (
-          <BracketViewer
-            matchups={matchups}
-            teams={(teams as Team[]) ?? []}
-            picks={bracketPicksMap}
-            bronze={bronzeTeamId}
-            actual={actualRounds}
-            bronzeWinnerActual={(actualsRow as Actuals | null)?.bronze_winner_team_id ?? null}
-            excludedSlots={autofilledSlotsFor(id)}
-          />
         )}
       </section>
     </div>
