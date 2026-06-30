@@ -157,57 +157,75 @@ export function fixedR32Matchups(teams: Team[]): Matchup[] {
   return R32_FIXED.map(([a, b], i) => ({ slot: `R32-${i + 1}`, a: seed(a), b: seed(b) }));
 }
 
-// Map each knockout fixture to its bracket slot. R32 binds by kickoff (the
-// canonical slot order). R16/QF/SF bind by matching a fixture's two teams to
-// the actual winners feeding that slot in the bracket tree, so a player's pick
-// for that slot lines up with the real matchup. Final and the third-place game
-// are unique per tournament, so they bind directly by stage.
-//
-// A round only resolves once its feeding round has finished — a future R16+
-// game (teams still TBD) won't be bound until the prior round decides it. R32
-// games always bind (the matchups are fixed), so future R32 games work too.
+// Scheduled kickoff (ISO UTC) for each bracket slot. This is the join key that
+// ties a player's pick for a slot to the real fixture by DATE/TIME — so picks
+// attach to the match itself, not the teams that end up in it, and a future
+// game shows its picks before the teams are known. R32 is fully scheduled;
+// fill R16/QF/SF as the official times are confirmed (must match the fixture
+// feed's kickoff_utc exactly). Final and third-place are unique per stage and
+// don't need a time here.
+export const KO_SLOT_KICKOFFS: Record<string, string> = {
+  ...Object.fromEntries(R32_SLOT_KICKOFFS.map((t, i) => [`R32-${i + 1}`, t])),
+  // "R16-1": "2026-07-..T..:..:00Z", ... "R16-8": "...",
+  // "QF-1":  "2026-07-..T..:..:00Z", ... "QF-4":  "...",
+  // "SF-1":  "2026-07-..T..:..:00Z",     "SF-2":  "...",
+};
+
+// Map each knockout fixture to its bracket slot. Slots with a scheduled kickoff
+// (KO_SLOT_KICKOFFS) bind by exact time — this works for past, live, AND future
+// games. For R16/QF/SF slots without a time yet, fall back to matching the
+// fixture's two teams to the actual winners feeding that slot (resolves only
+// once the previous round has finished). Final and third-place bind by stage.
 export function knockoutFixtureSlots(fixtures: Fixture[]): Map<number, string> {
   const out = new Map<number, string>();
   const byKickoff = new Map(fixtures.map((f) => [Date.parse(f.kickoff_utc), f]));
   const winnerBySlot: Record<string, number | null> = {};
+  const bound = new Set<string>();
 
-  R32_SLOT_KICKOFFS.forEach((t, i) => {
-    const slot = `R32-${i + 1}`;
-    const f = byKickoff.get(Date.parse(t));
-    if (f) out.set(f.id, slot);
-    winnerBySlot[slot] = f && f.status === "finished" ? f.winner_team_id : null;
-  });
+  const bind = (slot: string, f: Fixture | undefined) => {
+    if (!f) {
+      if (winnerBySlot[slot] === undefined) winnerBySlot[slot] = null;
+      return;
+    }
+    out.set(f.id, slot);
+    bound.add(slot);
+    winnerBySlot[slot] = f.status === "finished" ? f.winner_team_id : null;
+  };
 
-  const bindRound = (stage: string, count: number, prefix: string, feeder: string) => {
+  // 1) Time-based binding for every slot we have a kickoff for.
+  for (const [slot, t] of Object.entries(KO_SLOT_KICKOFFS)) {
+    bind(slot, byKickoff.get(Date.parse(t)));
+  }
+
+  // 2) Final and third-place are unique per stage.
+  for (const f of fixtures) {
+    if (f.stage === "F" && !out.has(f.id)) bind("F-1", f);
+    else if (f.stage === "bronze" && !out.has(f.id)) bind("bronze", f);
+  }
+
+  // 3) Team-match fallback for any R16/QF/SF slot still without a time.
+  const fallback = (stage: string, count: number, prefix: string, feeder: string) => {
     const roundFixtures = fixtures.filter((f) => f.stage === stage);
     for (let k = 1; k <= count; k++) {
       const slot = `${prefix}-${k}`;
-      const a = winnerBySlot[`${feeder}-${2 * k - 1}`];
-      const b = winnerBySlot[`${feeder}-${2 * k}`];
-      let winner: number | null = null;
-      if (a && b) {
-        const f = roundFixtures.find(
-          (x) =>
-            (x.home_team_id === a && x.away_team_id === b) ||
-            (x.home_team_id === b && x.away_team_id === a)
-        );
-        if (f) {
-          out.set(f.id, slot);
-          winner = f.status === "finished" ? f.winner_team_id : null;
+      if (!bound.has(slot)) {
+        const a = winnerBySlot[`${feeder}-${2 * k - 1}`];
+        const b = winnerBySlot[`${feeder}-${2 * k}`];
+        if (a && b) {
+          const f = roundFixtures.find(
+            (x) =>
+              (x.home_team_id === a && x.away_team_id === b) ||
+              (x.home_team_id === b && x.away_team_id === a)
+          );
+          if (f && !out.has(f.id)) bind(slot, f);
         }
       }
-      winnerBySlot[slot] = winner;
+      if (winnerBySlot[slot] === undefined) winnerBySlot[slot] = null;
     }
   };
-
-  bindRound("R16", 8, "R16", "R32");
-  bindRound("QF", 4, "QF", "R16");
-  bindRound("SF", 2, "SF", "QF");
-
-  for (const f of fixtures) {
-    if (f.stage === "F") out.set(f.id, "F");
-    else if (f.stage === "bronze") out.set(f.id, "bronze");
-  }
+  fallback("R16", 8, "R16", "R32");
+  fallback("QF", 4, "QF", "R16");
+  fallback("SF", 2, "SF", "QF");
 
   return out;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Fixture, StandingRow, Team } from "@/lib/types";
 import { flagUrl } from "@/lib/flags";
 import { knockoutFixtureSlots } from "@/lib/bracket";
@@ -13,10 +13,19 @@ interface Feed {
   teams: Team[];
 }
 
+interface AwardRow {
+  player_id: string;
+  champion_team_id: number | null;
+  runnerup_team_id: number | null;
+  top_scorer_name: string | null;
+  mvp_name: string | null;
+  golden_glove_name: string | null;
+}
+
 interface Predictions {
   players: { id: string; name: string }[];
   bracketPicks: { player_id: string; slot: string; picked_team_id: number }[];
-  champPicks: { player_id: string; champion_team_id: number | null }[];
+  awards: AwardRow[];
   bronzePicks: { player_id: string; bronze_winner_team_id: number | null }[];
 }
 
@@ -295,12 +304,10 @@ function KnockoutVoters({
   const home = fixture.home_team_id;
   const away = fixture.away_team_id;
 
+  // Each player's predicted winner of THIS match (slot). The bracket records
+  // the champion as slot F-1 and the third-place winner in bronze_picks; every
+  // other knockout slot is a normal bracket pick.
   const pickOf = (playerId: string): number | null => {
-    if (slot === "F") {
-      return (
-        preds.champPicks.find((c) => c.player_id === playerId)?.champion_team_id ?? null
-      );
-    }
     if (slot === "bronze") {
       return (
         preds.bronzePicks.find((c) => c.player_id === playerId)?.bronze_winner_team_id ??
@@ -313,23 +320,9 @@ function KnockoutVoters({
     );
   };
 
-  const homeVoters: Voter[] = [];
-  const awayVoters: Voter[] = [];
-  const otherVoters: Voter[] = [];
-  for (const p of preds.players) {
-    const pick = pickOf(p.id);
-    if (pick == null) continue;
-    const entry: Voter = { name: p.name, country: teamName(pick) };
-    if (pick === home) homeVoters.push(entry);
-    else if (pick === away) awayVoters.push(entry);
-    else otherVoters.push(entry);
-  }
   const byName = (a: Voter, b: Voter) => a.name.localeCompare(b.name);
-  homeVoters.sort(byName);
-  awayVoters.sort(byName);
-  otherVoters.sort(byName);
-
   const winner = fixture.status === "finished" ? fixture.winner_team_id : null;
+  const isAwardGame = fixture.stage === "F" || fixture.stage === "bronze";
 
   const Column = ({
     flag,
@@ -365,8 +358,26 @@ function KnockoutVoters({
     </div>
   );
 
-  return (
-    <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-3">
+  // When both teams are set, split into Country 1 / Other / Country 2. When the
+  // matchup isn't decided yet (future deep round), there's no Country 1/2 — show
+  // every pick grouped by the country each person chose for this match.
+  let body: ReactNode;
+  if (home && away) {
+    const homeVoters: Voter[] = [];
+    const awayVoters: Voter[] = [];
+    const otherVoters: Voter[] = [];
+    for (const p of preds.players) {
+      const pick = pickOf(p.id);
+      if (pick == null) continue;
+      const entry: Voter = { name: p.name, country: teamName(pick) };
+      if (pick === home) homeVoters.push(entry);
+      else if (pick === away) awayVoters.push(entry);
+      else otherVoters.push(entry);
+    }
+    homeVoters.sort(byName);
+    awayVoters.sort(byName);
+    otherVoters.sort(byName);
+    body = (
       <div className="grid grid-cols-3 items-start gap-2">
         <Column
           flag={teamFlag(home)}
@@ -382,6 +393,100 @@ function KnockoutVoters({
           won={winner != null && winner === away}
         />
       </div>
+    );
+  } else {
+    const byCountry = new Map<number, Voter[]>();
+    for (const p of preds.players) {
+      const pick = pickOf(p.id);
+      if (pick == null) continue;
+      if (!byCountry.has(pick)) byCountry.set(pick, []);
+      byCountry.get(pick)!.push({ name: p.name, country: teamName(pick) });
+    }
+    const groups = [...byCountry.entries()].sort(
+      (a, b) => b[1].length - a[1].length || teamName(a[0]).localeCompare(teamName(b[0]))
+    );
+    body =
+      groups.length === 0 ? (
+        <p className="text-xs text-slate-400">No picks for this match yet.</p>
+      ) : (
+        <div className="grid grid-cols-2 items-start gap-2 sm:grid-cols-3">
+          {groups.map(([teamId, voters]) => (
+            <Column
+              key={teamId}
+              flag={teamFlag(teamId)}
+              title={teamName(teamId)}
+              voters={voters.sort(byName)}
+              won={false}
+            />
+          ))}
+        </div>
+      );
+  }
+
+  return (
+    <div className="mt-1 space-y-2">
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">{body}</div>
+      {isAwardGame && <ExtraAwards feed={feed} preds={preds} />}
+    </div>
+  );
+}
+
+// Tournament-wide award picks, grouped per prize by the selected country/player,
+// shown below the Final and third-place games. These are the Awards-section
+// predictions (separate from the bracket's own champion/bronze picks).
+function ExtraAwards({ feed, preds }: { feed: Feed; preds: Predictions }) {
+  const teamById = new Map(feed.teams.map((t) => [t.id, t]));
+  const teamName = (id: number | null) =>
+    (id && teamById.get(id)?.name) || null;
+  const nameById = new Map(preds.players.map((p) => [p.id, p.name]));
+
+  const prizes: { label: string; valueOf: (a: AwardRow) => string | null }[] = [
+    { label: "1st place", valueOf: (a) => teamName(a.champion_team_id) },
+    { label: "2nd place", valueOf: (a) => teamName(a.runnerup_team_id) },
+    { label: "Top scorer", valueOf: (a) => a.top_scorer_name },
+    { label: "Best player", valueOf: (a) => a.mvp_name },
+    { label: "Golden glove", valueOf: (a) => a.golden_glove_name },
+  ];
+
+  const rows = prizes
+    .map((prize) => {
+      const byValue = new Map<string, string[]>();
+      for (const a of preds.awards) {
+        const v = prize.valueOf(a);
+        const who = nameById.get(a.player_id);
+        if (!v || !who) continue;
+        if (!byValue.has(v)) byValue.set(v, []);
+        byValue.get(v)!.push(who);
+      }
+      const groups = [...byValue.entries()].sort(
+        (x, y) => y[1].length - x[1].length || x[0].localeCompare(y[0])
+      );
+      return { label: prize.label, groups };
+    })
+    .filter((r) => r.groups.length > 0);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Extra awards
+      </p>
+      <ul className="space-y-1.5">
+        {rows.map((r) => (
+          <li key={r.label} className="text-xs">
+            <span className="font-semibold text-slate-700">{r.label}</span>
+            <span className="text-slate-300"> — </span>
+            {r.groups.map(([value, people], i) => (
+              <span key={value}>
+                {i > 0 && <span className="text-slate-300"> | </span>}
+                <span className="font-medium text-slate-600">{value}</span>
+                <span className="text-slate-400">: {people.sort().join(", ")}</span>
+              </span>
+            ))}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

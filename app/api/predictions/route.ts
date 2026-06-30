@@ -13,7 +13,11 @@ export async function GET() {
   const [players, brackets, part1, bronzes] = await Promise.all([
     supabase.from("players").select("id,name"),
     supabase.from("bracket_picks").select("player_id,slot,picked_team_id"),
-    supabase.from("part1_picks").select("player_id,champion_team_id"),
+    supabase
+      .from("part1_picks")
+      .select(
+        "player_id,champion_team_id,runnerup_team_id,top_scorer_name,mvp_name,golden_glove_name"
+      ),
     supabase.from("bronze_picks").select("player_id,bronze_winner_team_id"),
   ]);
 
@@ -24,7 +28,7 @@ export async function GET() {
   return NextResponse.json({
     players: players.data ?? [],
     bracketPicks,
-    champPicks: part1.data ?? [],
+    awards: part1.data ?? [],
     bronzePicks: bronzes.data ?? [],
   });
 }
