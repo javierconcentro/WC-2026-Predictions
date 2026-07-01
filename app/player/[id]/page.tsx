@@ -2,9 +2,9 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { currentPlayer, getConfig, part12Locked, bracketLocked } from "@/lib/auth";
 import { GROUPS, POINTS } from "@/lib/types";
-import type { Actuals, GroupRankingRow, Part1Picks, StandingRow, Team } from "@/lib/types";
+import type { Actuals, Fixture, GroupRankingRow, Part1Picks, StandingRow, Team } from "@/lib/types";
 import { r32FromFixtures, r32ResolvedWinners } from "@/lib/bracket";
-import { actualRoundMembers } from "@/lib/scoring";
+import { actualRoundMembers, tournamentFinished } from "@/lib/scoring";
 import { autofilledSlotsFor } from "@/lib/autofilled-picks";
 import BracketViewer from "@/components/BracketViewer";
 
@@ -62,15 +62,17 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   const p1 = part1 as Part1Picks | null;
   const ranks = (rankings ?? []) as GroupRankingRow[];
 
-  // Per-item scoring mirrors lib/scoring.ts. Parts 1 & 2 only count once locked.
+  // Per-item scoring mirrors lib/scoring.ts. Part 2 counts once locked; awards
+  // (Part 1) only count once the tournament has finished.
   const locked = part12Locked(cfg);
+  const awardsCount = locked && tournamentFinished((fixturesData ?? []) as Fixture[]);
   const actuals = (actualsRow ?? {}) as Actuals;
   const standings = (standingsRows ?? []) as StandingRow[];
   const nameMatch = (a?: string | null, b?: string | null) =>
     !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
 
   const scorerHit =
-    locked &&
+    awardsCount &&
     ((!!actuals.top_scorer_provider_id &&
       p1?.top_scorer_provider_id === actuals.top_scorer_provider_id) ||
       nameMatch(p1?.top_scorer_name, actuals.top_scorer_name));
@@ -79,13 +81,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     {
       label: "Champion",
       value: teamName(p1?.champion_team_id),
-      got: locked && !!actuals.champion_team_id && p1?.champion_team_id === actuals.champion_team_id ? POINTS.part1.champion : 0,
+      got: awardsCount && !!actuals.champion_team_id && p1?.champion_team_id === actuals.champion_team_id ? POINTS.part1.champion : 0,
       max: POINTS.part1.champion,
     },
     {
       label: "Runner-up",
       value: teamName(p1?.runnerup_team_id),
-      got: locked && !!actuals.runnerup_team_id && p1?.runnerup_team_id === actuals.runnerup_team_id ? POINTS.part1.runnerup : 0,
+      got: awardsCount && !!actuals.runnerup_team_id && p1?.runnerup_team_id === actuals.runnerup_team_id ? POINTS.part1.runnerup : 0,
       max: POINTS.part1.runnerup,
     },
     {
@@ -97,13 +99,13 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
     {
       label: "Best player",
       value: p1?.mvp_name ?? "—",
-      got: locked && nameMatch(p1?.mvp_name, actuals.mvp_name) ? POINTS.part1.mvp : 0,
+      got: awardsCount && nameMatch(p1?.mvp_name, actuals.mvp_name) ? POINTS.part1.mvp : 0,
       max: POINTS.part1.mvp,
     },
     {
       label: "Golden glove",
       value: p1?.golden_glove_name ?? "—",
-      got: locked && nameMatch(p1?.golden_glove_name, actuals.golden_glove_name) ? POINTS.part1.goldenGlove : 0,
+      got: awardsCount && nameMatch(p1?.golden_glove_name, actuals.golden_glove_name) ? POINTS.part1.goldenGlove : 0,
       max: POINTS.part1.goldenGlove,
     },
   ];

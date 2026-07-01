@@ -74,6 +74,15 @@ export function scorePart2(
   return pts;
 }
 
+// The tournament is over once the Final has been played. Awards (Part 1 —
+// champion, runner-up, top scorer, best player, golden glove) only score at
+// that point: some resolve progressively during the tournament (e.g. the live
+// top scorer changes game to game), so counting them early would award points
+// that can still change.
+export function tournamentFinished(fixtures: Fixture[]): boolean {
+  return fixtures.some((f) => f.stage === "F" && f.status === "finished");
+}
+
 // Teams that actually reached each knockout round, derived from finished
 // results in the PREVIOUS round — not from future fixtures appearing.
 // "Reached R16" = won a finished R32 match, etc.
@@ -142,15 +151,18 @@ export function scorePlayer(
   const p1 = scorePart1(part1, actuals);
   const p2 = scorePart2(rankings, standings);
   const p3 = scorePart3(bracket, bronzePick, fixtures, actuals);
-  const part1Pts = part12Locked ? p1.points : 0;
+  // Awards (Part 1) only count once the tournament has finished; Part 2 still
+  // accrues progressively from the group stage once locked.
+  const awardsCount = part12Locked && tournamentFinished(fixtures);
+  const part1Pts = awardsCount ? p1.points : 0;
   const part2Pts = part12Locked ? p2 : 0;
   return {
     part1: part1Pts,
     part2: part2Pts,
     part3: p3,
     total: part1Pts + part2Pts + p3,
-    championCorrect: part12Locked && p1.championCorrect,
-    runnerupCorrect: part12Locked && p1.runnerupCorrect,
+    championCorrect: awardsCount && p1.championCorrect,
+    runnerupCorrect: awardsCount && p1.runnerupCorrect,
   };
 }
 
