@@ -22,10 +22,9 @@ const ROUND_REACH: Record<string, "R16" | "QF" | "SF" | "F"> = {
   SF: "F",
 };
 
-const GOLD = "bg-[#fbe7a2] font-semibold text-[#7a5c00]";
-const SILVER = "bg-[#e1e4e9] font-semibold text-[#5b6470]";
-const BRONZE_CLS = "bg-[#ecc9a3] font-semibold text-[#80501f]";
 const GREEN = "bg-emerald-50 font-semibold text-emerald-700";
+// Every selected winner that hasn't scored (incl. the champion and bronze pick).
+const PICKED = "bg-slate-100 font-bold text-slate-700";
 const BOX_W = "130px";
 
 // Serialisable form of actualRoundMembers (Sets can't cross server→client).
@@ -168,21 +167,13 @@ export default function BracketViewer({
   };
 
   const rowClass = (slot: string, id: number | null, mode: BoxMode): string => {
-    const picked =
-      mode === "bronze" ? bronze : (picks[slot] ?? null);
-    if (mode === "final" && picked != null && id != null) {
-      return id === picked ? GOLD : SILVER;
-    }
+    const picked = mode === "bronze" ? bronze : (picks[slot] ?? null);
     if (id != null && picked === id) {
-      if (mode === "bronze") {
-        return liveBronzeWinner && id === liveBronzeWinner
-          ? BRONZE_CLS
-          : "bg-slate-50 font-semibold text-slate-500";
-      }
-      const round = slot.split("-")[0];
-      return pickedScores(round, id, slot)
-        ? GREEN
-        : "bg-slate-50 font-semibold text-slate-500";
+      const scored =
+        mode === "bronze"
+          ? !!(liveBronzeWinner && id === liveBronzeWinner)
+          : pickedScores(slot.split("-")[0], id, slot);
+      return scored ? GREEN : PICKED;
     }
     return id ? "text-slate-600" : "text-slate-300";
   };

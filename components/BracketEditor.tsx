@@ -312,16 +312,14 @@ export default function BracketEditor({ matchups, teams, locked, slotLocks = {},
 
       <p className="text-center text-xs text-slate-400">
         Each pick scores when that team reaches the round — R16 = 3 · QF = 5 · SF = 8 · Final = 12 · Bronze = 10.
-        Your gold champion is your bracket winner; the 25-pt champion is your Awards pick.
+        Your Final pick is your bracket winner; the 25-pt champion is your Awards pick.
       </p>
     </div>
   );
 }
 
-const GOLD = "bg-[#fbe7a2] font-semibold text-[#7a5c00]";
-const SILVER = "bg-[#e1e4e9] font-semibold text-[#5b6470]";
-const BRONZE = "bg-[#ecc9a3] font-semibold text-[#80501f]";
-const GREEN = "bg-emerald-50 font-semibold text-emerald-700";
+// A selected team (winner) in any round — neutral darker grey + bold.
+const PICKED = "bg-slate-100 font-bold text-slate-700";
 
 function MatchBox({
   a,
@@ -346,11 +344,10 @@ function MatchBox({
   onPick: (id: number | null) => void;
   innerRef?: (el: HTMLDivElement | null) => void;
 }) {
-  // In the Final: the chosen team is gold (champion), the other finalist silver
-  // (runner-up). Bronze box uses bronze; every other round uses green.
+  // A selected team is highlighted the same way in every round (champion, bronze
+  // and normal winners alike) — darker grey + bold.
   const rowClass = (id: number | null) => {
-    if (mode === "final" && picked != null && id != null) return id === picked ? GOLD : SILVER;
-    if (id != null && picked === id) return mode === "bronze" ? BRONZE : GREEN;
+    if (id != null && picked === id) return PICKED;
     return id ? "hover:bg-slate-50" : "text-slate-300";
   };
   return (
