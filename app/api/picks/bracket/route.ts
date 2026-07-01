@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { currentPlayer, getConfig, bracketLocked } from "@/lib/auth";
-import { r32SlotLocks, r32ResolvedWinners } from "@/lib/bracket";
+import { r32SlotLocks } from "@/lib/bracket";
 import { bracketLockedForPlayer } from "@/lib/bracket-locked-players";
-import type { Fixture } from "@/lib/types";
 
 export async function GET() {
   const player = await currentPlayer();
@@ -51,16 +50,18 @@ export async function POST(req: NextRequest) {
   );
   let preserved: { slot: string; picked_team_id: number }[] = [];
   if (lockedSlots.size > 0) {
-    const [{ data: existing }, { data: r32 }] = await Promise.all([
-      supabase.from("bracket_picks").select("slot,picked_team_id").eq("player_id", player.id),
-      supabase.from("fixtures").select("kickoff_utc,status,winner_team_id").eq("stage", "R32"),
-    ]);
+    const { data: existing } = await supabase
+      .from("bracket_picks")
+      .select("slot,picked_team_id")
+      .eq("player_id", player.id);
     const existingBySlot = new Map((existing ?? []).map((r: any) => [r.slot, r.picked_team_id]));
-    const resolved = r32ResolvedWinners((r32 ?? []) as Fixture[]);
-    // For each locked slot keep the player's pick, or fall back to the actual
-    // winner if they left it blank. Locked picks can't be changed by the client.
+    // Keep a locked slot ONLY if the player genuinely picked it before it locked
+    // (the client can't change locked picks). A slot they left blank is NOT
+    // auto-filled with the actual winner anymore — a pick the player never made
+    // must score 0, so we simply don't create one. The bracket tree still shows
+    // the real winner in that spot for display; it just isn't the player's pick.
     for (const slot of lockedSlots) {
-      const teamId = existingBySlot.get(slot) ?? resolved[slot];
+      const teamId = existingBySlot.get(slot);
       if (Number.isInteger(teamId)) preserved.push({ slot, picked_team_id: teamId as number });
     }
   }

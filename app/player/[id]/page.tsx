@@ -122,9 +122,16 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
   for (const b of (bracket ?? []) as { slot: string; picked_team_id: number }[]) {
     bracketPicksMap[b.slot] = b.picked_team_id;
   }
-  // Pre-fill blank finished R32 slots with the actual winner (mirrors BracketEditor load behaviour).
+  // Pre-fill blank finished R32 slots with the actual winner so the bracket
+  // tree stays connected visually — but track them: the player never made these
+  // picks, so they must be shown greyed and score 0 (same as the leaderboard,
+  // which has no pick there at all).
+  const prefilledSlots: string[] = [];
   for (const [slot, winnerId] of Object.entries(resolvedWinners)) {
-    if (bracketPicksMap[slot] == null) bracketPicksMap[slot] = winnerId;
+    if (bracketPicksMap[slot] == null) {
+      bracketPicksMap[slot] = winnerId;
+      prefilledSlots.push(slot);
+    }
   }
   const bronzeTeamId = (bronze as { bronze_winner_team_id?: number } | null)?.bronze_winner_team_id ?? null;
   const roundMembers = actualRoundMembers(fixturesData ?? []);
@@ -194,7 +201,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
             bronze={bronzeTeamId}
             actual={actualRounds}
             bronzeWinnerActual={(actualsRow as Actuals | null)?.bronze_winner_team_id ?? null}
-            excludedSlots={autofilledSlotsFor(id)}
+            excludedSlots={[...autofilledSlotsFor(id), ...prefilledSlots]}
           />
         )}
       </section>
