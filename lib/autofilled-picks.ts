@@ -9,6 +9,17 @@ export const AUTOFILLED_PICKS = new Set<string>([
   "6b02ce5b-008c-4ff7-9c55-8202ba8800cf:R32-1", // Sam
   "d1610945-e4c4-4342-99d8-4e9a70c66d06:R32-1", // Tao
   "0c20361b-fe91-422d-9a95-33a51040366c:R32-1", // Zoe
+  // Jake's finished-game picks were all auto-filled with the actual winners
+  // (he's the only player who "picked" the Paraguay/Canada/etc. upsets, and
+  // his finished slots were blanks the old save logic stamped in). Void every
+  // already-played knockout pick of his — see the 2026-07-01 review.
+  "f1ef5f56-4e2b-4b70-8a8f-a5c67dfdd333:R32-1", // Jake
+  "f1ef5f56-4e2b-4b70-8a8f-a5c67dfdd333:R32-2", // Jake
+  "f1ef5f56-4e2b-4b70-8a8f-a5c67dfdd333:R32-3", // Jake
+  "f1ef5f56-4e2b-4b70-8a8f-a5c67dfdd333:R32-4", // Jake
+  "f1ef5f56-4e2b-4b70-8a8f-a5c67dfdd333:R32-9", // Jake
+  "f1ef5f56-4e2b-4b70-8a8f-a5c67dfdd333:R32-10", // Jake
+  "f1ef5f56-4e2b-4b70-8a8f-a5c67dfdd333:R32-11", // Jake
 ]);
 
 // Returns slot names that are auto-filled (and should not score) for a player.
