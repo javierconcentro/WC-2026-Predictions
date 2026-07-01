@@ -3,6 +3,7 @@ import { currentPlayer, getConfig, part12Locked, bracketOpen, bracketLocked } fr
 import JoinGate from "@/components/JoinGate";
 import PicksEditor from "@/components/PicksEditor";
 import { r32FromFixtures, r32ResolvedWinners } from "@/lib/bracket";
+import { bracketLockedForPlayer } from "@/lib/bracket-locked-players";
 import type { Fixture, Team } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ export default async function PicksPage() {
       lockAt={cfg.lock_part12_at}
       bracketMatchups={matchups}
       bracketOpen={bracketOpen(cfg)}
-      bracketLocked={bracketLocked(cfg)}
+      bracketLocked={bracketLocked(cfg) || bracketLockedForPlayer(player.id)}
       bracketSlotLocks={slotLocks}
       bracketResolvedWinners={resolvedWinners}
     />

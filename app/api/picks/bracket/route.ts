@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { currentPlayer, getConfig, bracketLocked } from "@/lib/auth";
 import { r32SlotLocks, r32ResolvedWinners } from "@/lib/bracket";
+import { bracketLockedForPlayer } from "@/lib/bracket-locked-players";
 import type { Fixture } from "@/lib/types";
 
 export async function GET() {
@@ -27,6 +28,14 @@ export async function POST(req: NextRequest) {
   const cfg = await getConfig();
   if (bracketLocked(cfg)) {
     return NextResponse.json({ error: "Bracket is locked." }, { status: 403 });
+  }
+  // Reopened bracket: players who already submitted stay locked; only players
+  // who hadn't made picks may create them now.
+  if (bracketLockedForPlayer(player.id)) {
+    return NextResponse.json(
+      { error: "Your bracket is already locked in and can't be changed." },
+      { status: 403 }
+    );
   }
 
   const { picks, bronze_winner_team_id } = await req.json();
