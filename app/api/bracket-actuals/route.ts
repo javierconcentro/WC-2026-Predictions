@@ -46,19 +46,32 @@ export async function GET() {
   }
 
   const rounds = actualRoundMembers(fixtures);
+
+  // Teams knocked out of the bracket (losers of finished knockout games) — lets
+  // the editor mark a pick red once its team has been eliminated.
+  const eliminated = new Set<number>();
+  for (const f of fixtures) {
+    if (f.stage === "group" || f.status !== "finished" || !f.winner_team_id) continue;
+    const loser = f.winner_team_id === f.home_team_id ? f.away_team_id : f.home_team_id;
+    if (loser) eliminated.add(loser);
+  }
+
   const { data: actualsRow } = await supabase
     .from("actuals")
-    .select("bronze_winner_team_id")
+    .select("bronze_winner_team_id,champion_team_id")
     .eq("id", 1)
     .maybeSingle();
+  const a = actualsRow as
+    | { bronze_winner_team_id?: number; champion_team_id?: number }
+    | null;
 
   return NextResponse.json({
     R16: [...rounds.R16],
     QF: [...rounds.QF],
     SF: [...rounds.SF],
     F: [...rounds.F],
-    bronzeWinner:
-      (actualsRow as { bronze_winner_team_id?: number } | null)
-        ?.bronze_winner_team_id ?? null,
+    bronzeWinner: a?.bronze_winner_team_id ?? null,
+    champion: a?.champion_team_id ?? null,
+    eliminated: [...eliminated],
   });
 }

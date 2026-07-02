@@ -42,6 +42,74 @@ export default function BracketEditor({ matchups, teams, locked, slotLocks = {},
   const [picks, setPicks] = useState<Picks>({});
   const [bronze, setBronze] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Slots the editor filled with the actual winner because the player left them
+  // blank — shown neutral (not green/red), since they aren't the player's pick.
+  const [prefilled, setPrefilled] = useState<Set<string>>(new Set());
+
+  // Actual results, so already-played picks show green (right) / red (wrong).
+  const [results, setResults] = useState<{
+    R16: Set<number>;
+    QF: Set<number>;
+    SF: Set<number>;
+    F: Set<number>;
+    bronzeWinner: number | null;
+    champion: number | null;
+    eliminated: Set<number>;
+  }>({
+    R16: new Set(),
+    QF: new Set(),
+    SF: new Set(),
+    F: new Set(),
+    bronzeWinner: null,
+    champion: null,
+    eliminated: new Set(),
+  });
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/bracket-actuals", { cache: "no-store" });
+        if (!res.ok) return;
+        const d = await res.json();
+        if (!alive) return;
+        setResults({
+          R16: new Set(d.R16),
+          QF: new Set(d.QF),
+          SF: new Set(d.SF),
+          F: new Set(d.F),
+          bronzeWinner: d.bronzeWinner ?? null,
+          champion: d.champion ?? null,
+          eliminated: new Set(d.eliminated ?? []),
+        });
+      } catch {
+        // stale results are fine
+      }
+    };
+    load();
+    const id = setInterval(load, 2 * 60 * 1000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  // Colour a selected team: green if it reached the round (right), red if it's
+  // out (wrong), grey while the match hasn't been decided yet.
+  const pickClass = (round: string, mode: BoxMode, pickedId: number | null): string => {
+    if (pickedId == null) return PICKED;
+    if (mode === "bronze") {
+      if (results.bronzeWinner == null) return PICKED;
+      return pickedId === results.bronzeWinner ? GREEN : RED;
+    }
+    if (round === "F") {
+      if (results.champion == null) return PICKED;
+      return pickedId === results.champion ? GREEN : RED;
+    }
+    const reach = ROUND_REACH[round];
+    if (reach && results[reach].has(pickedId)) return GREEN;
+    if (results.eliminated.has(pickedId)) return RED;
+    return PICKED;
+  };
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -69,10 +137,15 @@ export default function BracketEditor({ matchups, teams, locked, slotLocks = {},
         for (const r of rows ?? []) map[r.slot] = r.picked_team_id;
         // Pre-fill any locked+finished match left blank with its actual winner,
         // so it shows as decided and flows into the next round.
+        const pf = new Set<string>();
         for (const [slot, winner] of Object.entries(resolvedWinners)) {
-          if (map[slot] == null && slotLockedNow(slot)) map[slot] = winner;
+          if (map[slot] == null && slotLockedNow(slot)) {
+            map[slot] = winner;
+            pf.add(slot);
+          }
         }
         setPicks(map);
+        setPrefilled(pf);
         setBronze(bronze_winner_team_id ?? null);
       }
       setLoaded(true);
@@ -203,6 +276,9 @@ export default function BracketEditor({ matchups, teams, locked, slotLocks = {},
         a={a}
         b={b}
         picked={picks[slot] ?? null}
+        pickedClass={
+          prefilled.has(slot) ? PICKED : pickClass(round, mode, picks[slot] ?? null)
+        }
         locked={locked || slotLockedNow(slot)}
         mode={mode}
         width={boxW}
@@ -292,6 +368,7 @@ export default function BracketEditor({ matchups, teams, locked, slotLocks = {},
                 a={cands[0]}
                 b={cands[1]}
                 picked={bronze}
+                pickedClass={pickClass("bronze", "bronze", bronze)}
                 locked={locked}
                 mode="bronze"
                 width={boxW}
@@ -312,19 +389,30 @@ export default function BracketEditor({ matchups, teams, locked, slotLocks = {},
 
       <p className="text-center text-xs text-slate-400">
         Each pick scores when that team reaches the round — R16 = 3 · QF = 5 · SF = 8 · Final = 12 · Bronze = 10.
-        Your Final pick is your bracket winner; the 25-pt champion is your Awards pick.
+        Green = still right · red = knocked out. Your Final pick is your bracket winner; the 25-pt champion is your Awards pick.
       </p>
     </div>
   );
 }
 
-// A selected team (winner) in any round — neutral darker grey + bold.
+// A selected team (winner) still awaiting its result — darker grey + bold.
 const PICKED = "bg-slate-100 font-bold text-slate-700";
+// A resolved pick: green if the team advanced (right), red if eliminated (wrong).
+const GREEN = "bg-emerald-50 font-semibold text-emerald-700";
+const RED = "bg-rose-50 font-semibold text-rose-700";
+// The round a pick must reach to be correct.
+const ROUND_REACH: Record<string, "R16" | "QF" | "SF" | "F"> = {
+  R32: "R16",
+  R16: "QF",
+  QF: "SF",
+  SF: "F",
+};
 
 function MatchBox({
   a,
   b,
   picked,
+  pickedClass,
   locked,
   mode,
   width,
@@ -336,6 +424,7 @@ function MatchBox({
   a: number | null;
   b: number | null;
   picked: number | null;
+  pickedClass: string; // green/red/grey for the selected team, decided by results
   locked: boolean;
   mode: BoxMode;
   width: string;
@@ -344,10 +433,8 @@ function MatchBox({
   onPick: (id: number | null) => void;
   innerRef?: (el: HTMLDivElement | null) => void;
 }) {
-  // A selected team is highlighted the same way in every round (champion, bronze
-  // and normal winners alike) — darker grey + bold.
   const rowClass = (id: number | null) => {
-    if (id != null && picked === id) return PICKED;
+    if (id != null && picked === id) return pickedClass;
     return id ? "hover:bg-slate-50" : "text-slate-300";
   };
   return (
