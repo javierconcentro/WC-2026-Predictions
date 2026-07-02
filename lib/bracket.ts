@@ -93,7 +93,7 @@ const R32_SLOT_KICKOFFS: string[] = [
   "2026-07-02T23:00:00Z", // 8  Portugal vs Croatia
   "2026-06-29T17:00:00Z", // 9  Brazil vs Japan
   "2026-06-30T17:00:00Z", // 10 Ivory Coast vs Norway
-  "2026-07-01T01:00:00Z", // 11 Mexico vs Ecuador
+  "2026-07-01T02:00:00Z", // 11 Mexico vs Ecuador (feed moved it +1h from 01:00)
   "2026-07-01T16:00:00Z", // 12 England vs Congo DR
   "2026-07-03T03:00:00Z", // 13 Switzerland vs Algeria
   "2026-07-04T01:30:00Z", // 14 Colombia vs Ghana
