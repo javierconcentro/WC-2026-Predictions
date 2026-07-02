@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { currentPlayer, getConfig, bracketLocked } from "@/lib/auth";
 import { r32SlotLocks } from "@/lib/bracket";
 import { bracketLockedForPlayer } from "@/lib/bracket-locked-players";
+import type { Fixture } from "@/lib/types";
 
 export async function GET() {
   const player = await currentPlayer();
@@ -42,9 +43,11 @@ export async function POST(req: NextRequest) {
 
   // Slots whose individual lock time has already passed can't be changed —
   // preserve whatever's in the DB for them regardless of what the client sends.
+  // Lock times come from the live R32 fixtures (each slot locks at its kickoff).
+  const { data: r32 } = await supabase.from("fixtures").select("*").eq("stage", "R32");
   const now = Date.now();
   const lockedSlots = new Set(
-    Object.entries(r32SlotLocks())
+    Object.entries(r32SlotLocks((r32 ?? []) as Fixture[]))
       .filter(([, t]) => now >= Date.parse(t))
       .map(([slot]) => slot)
   );
