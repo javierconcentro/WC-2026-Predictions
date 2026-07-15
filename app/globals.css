@@ -9,11 +9,14 @@
 body {
   color: var(--foreground);
   background-color: var(--background);
-  /* Subtle staggered dot texture, echoing the Concentro brand pattern */
+  /* Full-bleed background photo with a light scrim on top so text outside the
+     white cards stays legible. Lower the 0.45 alpha to make the photo stronger,
+     raise it to soften further. */
   background-image:
-    radial-gradient(circle, rgba(16, 24, 40, 0.035) 8px, transparent 9px),
-    radial-gradient(circle, rgba(16, 24, 40, 0.025) 8px, transparent 9px);
-  background-size: 60px 60px, 60px 60px;
-  background-position: 0 0, 30px 30px;
+    linear-gradient(rgba(231, 234, 248, 0.45), rgba(231, 234, 248, 0.45)),
+    url("/Background%20image%20webfile.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   background-attachment: fixed;
 }
