@@ -9,14 +9,23 @@
 body {
   color: var(--foreground);
   background-color: var(--background);
-  /* Full-bleed background photo with a light scrim on top so text outside the
-     white cards stays legible. Lower the 0.45 alpha to make the photo stronger,
-     raise it to soften further. */
+}
+
+/* Fixed background photo on its own layer behind everything. A gentle blur
+   softens the busy detail so it reads as a backdrop, and a light tint keeps
+   text legible. Tune: blur() = how busy, tint alpha (0.22) = how washed out. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
   background-image:
-    linear-gradient(rgba(231, 234, 248, 0.45), rgba(231, 234, 248, 0.45)),
+    linear-gradient(rgba(231, 234, 248, 0.22), rgba(231, 234, 248, 0.22)),
     url("/Background%20image%20webfile.webp");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  filter: blur(4px);
+  /* scale up slightly so the blur doesn't reveal soft edges */
+  transform: scale(1.05);
 }
