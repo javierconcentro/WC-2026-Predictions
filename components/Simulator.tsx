@@ -14,15 +14,12 @@ import { scorePlayer, compareForLeaderboard, type ScoreBreakdown } from "@/lib/s
 import { filterAutofilledPicks } from "@/lib/autofilled-picks";
 import { knockoutFixtureSlots } from "@/lib/bracket";
 import { flagUrl } from "@/lib/flags";
-import PlayerPicker from "./PlayerPicker";
 import {
-  MVP_FEATURED,
-  MVP_REST,
-  SCORER_FEATURED,
-  SCORER_REST,
-  GK_FEATURED,
-  GK_REST,
-} from "@/lib/playerLists";
+  SCORER_CANDIDATES,
+  MVP_CANDIDATES,
+  GLOVE_CANDIDATES,
+  type AwardCandidate,
+} from "@/lib/awardCandidates";
 
 interface PlayerRow {
   id: string;
@@ -122,9 +119,15 @@ export default function Simulator({
   const [eaWinner, setEaWinner] = useState<number>(eaA);
   const [finalPick, setFinalPick] = useState<number>(fixedFinalist);
   const [thirdPick, setThirdPick] = useState<number>(fixedThird);
-  const [topScorer, setTopScorer] = useState<string>(actuals.top_scorer_name ?? "");
-  const [mvp, setMvp] = useState<string>(actuals.mvp_name ?? "");
-  const [glove, setGlove] = useState<string>(actuals.golden_glove_name ?? "");
+  // Default each selector to the current actual winner if it's on the shortlist,
+  // otherwise the favorite (first entry).
+  const initAward = (current: string | null | undefined, list: AwardCandidate[]) =>
+    current && list.some((c) => c.name === current) ? current : list[0]?.name ?? "";
+  const [topScorer, setTopScorer] = useState<string>(
+    initAward(actuals.top_scorer_name, SCORER_CANDIDATES)
+  );
+  const [mvp, setMvp] = useState<string>(initAward(actuals.mvp_name, MVP_CANDIDATES));
+  const [glove, setGlove] = useState<string>(initAward(actuals.golden_glove_name, GLOVE_CANDIDATES));
 
   // Rows expanded in the projected standings — independent, multiple at once.
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
@@ -276,6 +279,28 @@ export default function Simulator({
     </div>
   );
 
+  const AwardSelect = ({
+    value,
+    onChange,
+    candidates,
+  }: {
+    value: string;
+    onChange: (v: string) => void;
+    candidates: AwardCandidate[];
+  }) => (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+    >
+      {candidates.map((c) => (
+        <option key={c.name} value={c.name}>
+          {c.name} — {c.country}
+        </option>
+      ))}
+    </select>
+  );
+
   const PickLine = ({ lp, diff }: { lp: LivePick; diff: boolean }) => (
     <div
       className={`flex items-center justify-between gap-2 rounded px-2 py-1 ${
@@ -375,36 +400,15 @@ export default function Simulator({
               <p className="text-sm font-semibold text-slate-700">Awards</p>
               <div>
                 <p className="mb-1 text-xs font-medium text-slate-500">⚽ Top scorer</p>
-                <PlayerPicker
-                  label=""
-                  value={topScorer}
-                  disabled={false}
-                  featured={SCORER_FEATURED}
-                  rest={SCORER_REST}
-                  onChange={setTopScorer}
-                />
+                <AwardSelect value={topScorer} onChange={setTopScorer} candidates={SCORER_CANDIDATES} />
               </div>
               <div>
                 <p className="mb-1 text-xs font-medium text-slate-500">🌟 Best player</p>
-                <PlayerPicker
-                  label=""
-                  value={mvp}
-                  disabled={false}
-                  featured={MVP_FEATURED}
-                  rest={MVP_REST}
-                  onChange={setMvp}
-                />
+                <AwardSelect value={mvp} onChange={setMvp} candidates={MVP_CANDIDATES} />
               </div>
               <div>
                 <p className="mb-1 text-xs font-medium text-slate-500">🧤 Golden glove</p>
-                <PlayerPicker
-                  label=""
-                  value={glove}
-                  disabled={false}
-                  featured={GK_FEATURED}
-                  rest={GK_REST}
-                  onChange={setGlove}
-                />
+                <AwardSelect value={glove} onChange={setGlove} candidates={GLOVE_CANDIDATES} />
               </div>
             </div>
           </div>
