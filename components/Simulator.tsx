@@ -210,8 +210,8 @@ export default function Simulator({
       <div>
         <h2 className="text-lg font-bold text-white">What-if Simulator</h2>
         <p className="text-xs text-slate-200">
-          Set hypothetical outcomes for the remaining games and awards — the projected standings
-          update instantly. Nothing is saved; leaving this tab discards the scenario.
+          Still think you can win? Play out the last games and awards, and see exactly what has to
+          happen for you to climb, and who to root against.
         </p>
       </div>
 
