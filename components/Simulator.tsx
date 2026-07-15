@@ -135,8 +135,9 @@ export default function Simulator({
   const [mvp, setMvp] = useState<string>(SIMULATOR_DEFAULTS.mvp);
   const [glove, setGlove] = useState<string>(SIMULATOR_DEFAULTS.goldenGlove);
 
-  // Rows expanded in the projected standings — independent, multiple at once.
+  // Rows expanded (normal mode) / selected (compare mode) — multiple at once.
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const [compareMode, setCompareMode] = useState(false);
   const toggleOpen = (id: string) =>
     setOpenIds((prev) => {
       const next = new Set(prev);
@@ -211,7 +212,6 @@ export default function Simulator({
       if (vals.size > 1) diffKeys.add(lp.key);
     }
   }
-  const comparing = openList.length >= 2;
 
   const projected = useMemo(() => {
     if (!applicable) return live;
@@ -307,12 +307,8 @@ export default function Simulator({
     </select>
   );
 
-  const PickLine = ({ lp, diff }: { lp: LivePick; diff: boolean }) => (
-    <div
-      className={`flex items-center justify-between gap-2 rounded px-2 py-1 ${
-        diff ? "border-l-2 border-amber-400 bg-amber-50" : ""
-      }`}
-    >
+  const PickLine = ({ lp }: { lp: LivePick }) => (
+    <div className="flex items-center justify-between gap-2 rounded px-2 py-1">
       <span className="shrink-0 text-xs text-slate-500">{lp.label}</span>
       <span className="flex min-w-0 items-center justify-end gap-1.5">
         {lp.kind === "team" ? (
@@ -350,6 +346,86 @@ export default function Simulator({
     </div>
   );
 
+  // Side-by-side comparison: rows = the remaining matches/awards, columns = the
+  // selected players, each cell their guess + score for that outcome.
+  const CompareTable = ({ selected }: { selected: Ranked[] }) => {
+    if (selected.length < 2) {
+      return (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-center text-sm text-slate-500 shadow-sm">
+          Select at least two players above to line up their picks.
+        </div>
+      );
+    }
+    const template = livePicksFor(selected[0].player.id);
+    const picksById = new Map(selected.map((r) => [r.player.id, livePicksFor(r.player.id)]));
+    const cell = (lp: LivePick) => (
+      <>
+        <span
+          className={`block truncate text-xs font-medium ${
+            lp.matches ? "text-emerald-700" : "text-slate-600"
+          }`}
+        >
+          {lp.kind === "team" ? nameOf(lp.teamId) : lp.text || "—"}
+        </span>
+        <span
+          className={`text-[10px] font-semibold tabular-nums ${
+            lp.matches ? "text-emerald-600" : "text-slate-300"
+          }`}
+        >
+          {lp.matches ? `+${lp.pts}` : "0"}
+        </span>
+      </>
+    );
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 bg-[#101828] px-3 py-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">Head-to-head</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[380px] text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-left">
+                <th className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  Match / award
+                </th>
+                {selected.map((r) => (
+                  <th key={r.player.id} className="px-3 py-2 text-left align-bottom">
+                    <span className="block truncate text-sm font-semibold text-[#101828]">
+                      {r.player.name}
+                    </span>
+                    <span className="text-[10px] font-medium text-slate-400">{r.score.total} pts</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {template.map((t) => (
+                <tr
+                  key={t.key}
+                  className={`border-b border-slate-100 last:border-0 ${
+                    diffKeys.has(t.key) ? "bg-amber-50" : ""
+                  }`}
+                >
+                  <td className="px-3 py-1.5 align-top text-xs font-medium text-slate-500">
+                    {t.label}
+                  </td>
+                  {selected.map((r) => {
+                    const lp = picksById.get(r.player.id)!.find((x) => x.key === t.key)!;
+                    return (
+                      <td key={r.player.id} className="px-3 py-1.5 align-top">
+                        {cell(lp)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -365,6 +441,7 @@ export default function Simulator({
           The simulator becomes available once one semifinal is decided and the other is set.
         </div>
       ) : (
+        <>
         <div className="grid gap-4 md:grid-cols-2">
           {/* LEFT — inputs */}
           <div className="space-y-4">
@@ -425,21 +502,30 @@ export default function Simulator({
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
                 Projected standings
               </p>
-              {comparing ? (
-                <span className="text-[10px] font-medium text-amber-300">
-                  Comparing {openList.length} · amber = differs
-                </span>
-              ) : (
-                <span className="text-[10px] font-medium text-slate-400">Tap a row for picks</span>
-              )}
+              <button
+                onClick={() => setCompareMode((m) => !m)}
+                className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors ${
+                  compareMode
+                    ? "bg-amber-400 text-[#101828]"
+                    : "bg-white/15 text-slate-100 hover:bg-white/25"
+                }`}
+              >
+                {compareMode ? "Done" : "Compare"}
+              </button>
             </div>
+            {compareMode && (
+              <p className="border-b border-slate-100 bg-amber-50 px-3 py-1.5 text-[11px] text-amber-700">
+                Select players to line up their picks side by side.
+              </p>
+            )}
             <ul>
               {projected.map((r) => {
                 const liveRow = liveByPlayer.get(r.player.id);
                 const rankDelta = liveRow ? liveRow.rank - r.rank : 0; // + = moved up
                 const ptsDelta = liveRow ? r.score.total - liveRow.score.total : 0;
-                const open = openIds.has(r.player.id);
-                const picks = open ? livePicksFor(r.player.id) : [];
+                const selected = openIds.has(r.player.id);
+                const showPanel = !compareMode && selected;
+                const picks = showPanel ? livePicksFor(r.player.id) : [];
                 const matchPicks = picks.filter((p) =>
                   ["sf", "champ", "runner", "bronze"].includes(p.key)
                 );
@@ -449,20 +535,34 @@ export default function Simulator({
                     <button
                       onClick={() => toggleOpen(r.player.id)}
                       className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-slate-50 ${
-                        meId === r.player.id ? "bg-[#e7eaf8]/70" : ""
+                        compareMode && selected
+                          ? "bg-amber-50"
+                          : meId === r.player.id
+                            ? "bg-[#e7eaf8]/70"
+                            : ""
                       }`}
                     >
-                      <span className="w-5 shrink-0 text-sm font-semibold text-slate-400">
-                        {r.rank}
-                      </span>
+                      {compareMode ? (
+                        <span
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold ${
+                            selected
+                              ? "border-amber-500 bg-amber-400 text-[#101828]"
+                              : "border-slate-300 text-transparent"
+                          }`}
+                        >
+                          ✓
+                        </span>
+                      ) : (
+                        <span className="w-5 shrink-0 text-sm font-semibold text-slate-400">
+                          {r.rank}
+                        </span>
+                      )}
                       <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[#101828]">
                         {r.player.name}
                       </span>
                       <span className="shrink-0 text-right">
                         {rankDelta > 0 ? (
-                          <span className="text-xs font-semibold text-emerald-600">
-                            ▲{rankDelta}
-                          </span>
+                          <span className="text-xs font-semibold text-emerald-600">▲{rankDelta}</span>
                         ) : rankDelta < 0 ? (
                           <span className="text-xs font-semibold text-rose-500">▼{-rankDelta}</span>
                         ) : (
@@ -477,36 +577,29 @@ export default function Simulator({
                           </span>
                         )}
                       </span>
-                      <svg
-                        className={`h-4 w-4 shrink-0 text-slate-300 transition-transform ${
-                          open ? "rotate-180" : ""
-                        }`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
+                      {!compareMode && (
+                        <svg
+                          className={`h-4 w-4 shrink-0 text-slate-300 transition-transform ${
+                            selected ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      )}
                     </button>
 
-                    {open && (
+                    {showPanel && (
                       <div className="border-t border-slate-100 bg-slate-50/70 px-3 py-2.5">
-                        <div className="mb-2 flex items-baseline justify-between">
-                          <span className="text-xs font-semibold text-slate-700">
-                            {r.rank}. {r.player.name}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {r.score.total} pts projected
-                          </span>
-                        </div>
-
                         <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                           Remaining matches
                         </p>
                         <div className="space-y-0.5">
                           {matchPicks.map((lp) => (
-                            <PickLine key={lp.key} lp={lp} diff={diffKeys.has(lp.key)} />
+                            <PickLine key={lp.key} lp={lp} />
                           ))}
                         </div>
 
@@ -515,7 +608,7 @@ export default function Simulator({
                         </p>
                         <div className="space-y-0.5">
                           {awardPicks.map((lp) => (
-                            <PickLine key={lp.key} lp={lp} diff={diffKeys.has(lp.key)} />
+                            <PickLine key={lp.key} lp={lp} />
                           ))}
                         </div>
 
@@ -530,6 +623,11 @@ export default function Simulator({
             </ul>
           </div>
         </div>
+
+        {compareMode && (
+          <CompareTable selected={projected.filter((r) => openIds.has(r.player.id))} />
+        )}
+        </>
       )}
 
       <p className="text-center text-xs text-slate-200">
