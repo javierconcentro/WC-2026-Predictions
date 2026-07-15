@@ -53,6 +53,7 @@ export default function LiveGames() {
   const [preds, setPreds] = useState<Predictions | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [awardsOpen, setAwardsOpen] = useState(false);
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const scrolledOnce = useRef(false);
 
@@ -207,6 +208,29 @@ export default function LiveGames() {
           </div>
         );
       })}
+
+      {/* Standalone "Awards" dropdown, below the final. Independent of the
+          game rows — holds the tournament-wide award predictions. */}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <button
+          onClick={() => setAwardsOpen((o) => !o)}
+          className="block w-full p-3 text-left transition-colors hover:bg-slate-50"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold">🏅 Awards</span>
+            <span className="text-xs text-slate-400">{awardsOpen ? "Hide" : "Show"}</span>
+          </div>
+        </button>
+        {awardsOpen && (
+          <div className="border-t border-slate-100 bg-slate-50/60 p-3">
+            {preds ? (
+              <ExtraAwards feed={feed} preds={preds} />
+            ) : (
+              <p className="text-xs text-slate-400">Loading predictions…</p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -326,7 +350,6 @@ function KnockoutVoters({
 
   const byName = (a: Voter, b: Voter) => a.name.localeCompare(b.name);
   const winner = fixture.status === "finished" ? fixture.winner_team_id : null;
-  const isAwardGame = fixture.stage === "F" || fixture.stage === "bronze";
 
   // Names only for the two teams in the match (the card above already names
   // them); the winning side turns green. The middle column holds everyone who
@@ -425,17 +448,12 @@ function KnockoutVoters({
       );
   }
 
-  return (
-    <div className="space-y-3 border-t border-slate-100 bg-slate-50/60 p-3">
-      {body}
-      {isAwardGame && <ExtraAwards feed={feed} preds={preds} />}
-    </div>
-  );
+  return <div className="border-t border-slate-100 bg-slate-50/60 p-3">{body}</div>;
 }
 
-// Tournament-wide award picks, grouped per prize by the selected country/player,
-// shown below the Final and third-place games. These are the Awards-section
-// predictions (separate from the bracket's own champion/bronze picks).
+// Tournament-wide award picks, grouped per prize by the selected country/player.
+// Rendered inside the standalone "Awards" dropdown below the final. These are
+// the Awards-section predictions (separate from the bracket champion/bronze).
 function ExtraAwards({ feed, preds }: { feed: Feed; preds: Predictions }) {
   const teamById = new Map(feed.teams.map((t) => [t.id, t]));
   const teamName = (id: number | null) =>
@@ -467,15 +485,13 @@ function ExtraAwards({ feed, preds }: { feed: Feed; preds: Predictions }) {
     })
     .filter((r) => r.groups.length > 0);
 
-  if (rows.length === 0) return null;
+  if (rows.length === 0) {
+    return <p className="text-xs text-slate-400">No award picks submitted yet.</p>;
+  }
 
   return (
-    <div className="border-t border-slate-200 pt-2.5">
-      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Extra awards
-      </p>
-      <ul className="space-y-1.5">
-        {rows.map((r) => (
+    <ul className="space-y-1.5">
+      {rows.map((r) => (
           <li key={r.label} className="text-xs">
             <span className="font-semibold text-slate-700">{r.label}</span>
             <span className="text-slate-300"> — </span>
@@ -487,8 +503,7 @@ function ExtraAwards({ feed, preds }: { feed: Feed; preds: Predictions }) {
               </span>
             ))}
           </li>
-        ))}
-      </ul>
-    </div>
+      ))}
+    </ul>
   );
 }
