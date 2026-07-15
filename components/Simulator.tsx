@@ -18,6 +18,7 @@ import {
   SCORER_CANDIDATES,
   MVP_CANDIDATES,
   GLOVE_CANDIDATES,
+  SIMULATOR_DEFAULTS,
   type AwardCandidate,
 } from "@/lib/awardCandidates";
 
@@ -115,19 +116,24 @@ export default function Simulator({
     return m;
   }, [live]);
 
-  // --- Scenario inputs ---
-  const [eaWinner, setEaWinner] = useState<number>(eaA);
-  const [finalPick, setFinalPick] = useState<number>(fixedFinalist);
-  const [thirdPick, setThirdPick] = useState<number>(fixedThird);
-  // Default each selector to the current actual winner if it's on the shortlist,
-  // otherwise the favorite (first entry).
-  const initAward = (current: string | null | undefined, list: AwardCandidate[]) =>
-    current && list.some((c) => c.name === current) ? current : list[0]?.name ?? "";
-  const [topScorer, setTopScorer] = useState<string>(
-    initAward(actuals.top_scorer_name, SCORER_CANDIDATES)
-  );
-  const [mvp, setMvp] = useState<string>(initAward(actuals.mvp_name, MVP_CANDIDATES));
-  const [glove, setGlove] = useState<string>(initAward(actuals.golden_glove_name, GLOVE_CANDIDATES));
+  // --- Scenario inputs, pre-filled with the favorite outcomes from config ---
+  // Match defaults are team names resolved against the live fixtures (falling
+  // back to the derived side if a name doesn't match).
+  const defSemi = [eaA, eaB].find((id) => nameOf(id) === SIMULATOR_DEFAULTS.semifinalWinner) ?? eaA;
+  const defSemiLoser = defSemi === eaA ? eaB : eaA;
+  const defFinal =
+    [defSemi, fixedFinalist].find((id) => nameOf(id) === SIMULATOR_DEFAULTS.finalWinner) ??
+    fixedFinalist;
+  const defThird =
+    [defSemiLoser, fixedThird].find((id) => nameOf(id) === SIMULATOR_DEFAULTS.thirdPlaceWinner) ??
+    fixedThird;
+
+  const [eaWinner, setEaWinner] = useState<number>(defSemi);
+  const [finalPick, setFinalPick] = useState<number>(defFinal);
+  const [thirdPick, setThirdPick] = useState<number>(defThird);
+  const [topScorer, setTopScorer] = useState<string>(SIMULATOR_DEFAULTS.topScorer);
+  const [mvp, setMvp] = useState<string>(SIMULATOR_DEFAULTS.mvp);
+  const [glove, setGlove] = useState<string>(SIMULATOR_DEFAULTS.goldenGlove);
 
   // Rows expanded in the projected standings — independent, multiple at once.
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());

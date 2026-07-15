@@ -40,3 +40,16 @@ export const GLOVE_CANDIDATES: AwardCandidate[] = [
   { name: "Emiliano Martínez", country: "Argentina" },
   { name: "Mike Maignan", country: "France" },
 ];
+
+// The favorite outcomes the simulator loads with, so it opens on a baseline
+// scenario rather than blank (everything stays editable). Update as results come
+// in. Match values are TEAM names (resolved against the live fixtures); award
+// values are player names (should appear in the lists above).
+export const SIMULATOR_DEFAULTS = {
+  semifinalWinner: "England", // England–Argentina semifinal
+  finalWinner: "Spain", //       → champion Spain, runner-up the other finalist
+  thirdPlaceWinner: "France", //  → bronze France, 4th the other third-place team
+  topScorer: "Lionel Messi",
+  mvp: "Lionel Messi",
+  goldenGlove: "Unai Simón",
+};
