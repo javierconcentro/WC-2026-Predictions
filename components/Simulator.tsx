@@ -12,6 +12,7 @@ import type {
 } from "@/lib/types";
 import { scorePlayer, compareForLeaderboard, type ScoreBreakdown } from "@/lib/scoring";
 import { filterAutofilledPicks } from "@/lib/autofilled-picks";
+import { knockoutFixtureSlots } from "@/lib/bracket";
 import { flagUrl } from "@/lib/flags";
 import PlayerPicker from "./PlayerPicker";
 import {
@@ -125,6 +126,21 @@ export default function Simulator({
   const [mvp, setMvp] = useState<string>(actuals.mvp_name ?? "");
   const [glove, setGlove] = useState<string>(actuals.golden_glove_name ?? "");
 
+  // Rows expanded in the projected standings — independent, multiple at once.
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const toggleOpen = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // The bracket slot of the open semifinal, so we can read each player's pick
+  // for it (their predicted England–Argentina winner).
+  const slotByFixture = useMemo(() => knockoutFixtureSlots(fixtures), [fixtures]);
+  const openSfSlot = openSF ? slotByFixture.get(openSF.id) ?? null : null;
+
   const eaLoser = eaWinner === eaA ? eaB : eaA;
   const finalists = [eaWinner, fixedFinalist];
   const thirdTeams = [eaLoser, fixedThird];
@@ -132,6 +148,61 @@ export default function Simulator({
   const finalWinner = finalists.includes(finalPick) ? finalPick : fixedFinalist;
   const thirdWinner = thirdTeams.includes(thirdPick) ? thirdPick : fixedThird;
   const runnerUp = finalists.find((t) => t !== finalWinner) ?? null;
+
+  // The only picks the simulator can move: the three remaining matches and the
+  // three awards. Each is scored against the currently-set scenario, so these
+  // recolour live as the left-panel toggles change.
+  const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
+  const nameEq = (a: string | null | undefined, b: string | null | undefined) =>
+    !!norm(a) && norm(a) === norm(b);
+
+  type LivePick =
+    | { key: string; label: string; pts: number; kind: "team"; teamId: number | null; matches: boolean; cmp: string }
+    | { key: string; label: string; pts: number; kind: "text"; text: string; matches: boolean; cmp: string };
+
+  const livePicksFor = (playerId: string): LivePick[] => {
+    const p1 = part1.find((x) => x.player_id === playerId) ?? null;
+    const sfPick = brackets.find((b) => b.player_id === playerId && b.slot === openSfSlot)?.picked_team_id ?? null;
+    const brz = bronzes.find((b) => b.player_id === playerId)?.bronze_winner_team_id ?? null;
+    const champ = p1?.champion_team_id ?? null;
+    const runner = p1?.runnerup_team_id ?? null;
+    const team = (
+      key: string,
+      label: string,
+      pts: number,
+      teamId: number | null,
+      matches: boolean
+    ): LivePick => ({ key, label, pts, kind: "team", teamId, matches, cmp: teamId == null ? "∅" : String(teamId) });
+    const text = (
+      key: string,
+      label: string,
+      pts: number,
+      value: string | null | undefined,
+      matches: boolean
+    ): LivePick => ({ key, label, pts, kind: "text", text: value ?? "", matches, cmp: norm(value) || "∅" });
+    return [
+      team("sf", "Semifinal", 12, sfPick, sfPick != null && sfPick === eaWinner),
+      team("champ", "Champion", 25, champ, champ != null && champ === finalWinner),
+      team("runner", "Runner-up", 15, runner, runner != null && runner === runnerUp),
+      team("bronze", "Bronze", 10, brz, brz != null && brz === thirdWinner),
+      text("scorer", "Top scorer", 20, p1?.top_scorer_name, nameEq(p1?.top_scorer_name, topScorer)),
+      text("mvp", "Best player", 10, p1?.mvp_name, nameEq(p1?.mvp_name, mvp)),
+      text("glove", "Golden glove", 10, p1?.golden_glove_name, nameEq(p1?.golden_glove_name, glove)),
+    ];
+  };
+
+  // In compare mode (2+ rows open) mark the pick categories where the open
+  // players disagree — that's where the standings gap is decided.
+  const openList = [...openIds].filter((id) => players.some((p) => p.id === id));
+  const diffKeys = new Set<string>();
+  if (openList.length >= 2) {
+    const perPlayer = openList.map((id) => livePicksFor(id));
+    for (const lp of perPlayer[0]) {
+      const vals = new Set(perPlayer.map((lps) => lps.find((x) => x.key === lp.key)?.cmp ?? "∅"));
+      if (vals.size > 1) diffKeys.add(lp.key);
+    }
+  }
+  const comparing = openList.length >= 2;
 
   const projected = useMemo(() => {
     if (!applicable) return live;
@@ -201,6 +272,49 @@ export default function Simulator({
       <span className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
         <Flag id={id} />
         {nameOf(id)}
+      </span>
+    </div>
+  );
+
+  const PickLine = ({ lp, diff }: { lp: LivePick; diff: boolean }) => (
+    <div
+      className={`flex items-center justify-between gap-2 rounded px-2 py-1 ${
+        diff ? "border-l-2 border-amber-400 bg-amber-50" : ""
+      }`}
+    >
+      <span className="shrink-0 text-xs text-slate-500">{lp.label}</span>
+      <span className="flex min-w-0 items-center justify-end gap-1.5">
+        {lp.kind === "team" ? (
+          lp.teamId ? (
+            <>
+              <Flag id={lp.teamId} />
+              <span
+                className={`truncate text-xs font-medium ${
+                  lp.matches ? "text-emerald-700" : "text-slate-500"
+                }`}
+              >
+                {nameOf(lp.teamId)}
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-slate-300">—</span>
+          )
+        ) : (
+          <span
+            className={`truncate text-xs font-medium ${
+              lp.matches ? "text-emerald-700" : "text-slate-500"
+            }`}
+          >
+            {lp.text || "—"}
+          </span>
+        )}
+        <span
+          className={`w-8 shrink-0 text-right text-[10px] font-semibold tabular-nums ${
+            lp.matches ? "text-emerald-600" : "text-slate-300"
+          }`}
+        >
+          {lp.matches ? `+${lp.pts}` : "0"}
+        </span>
       </span>
     </div>
   );
@@ -297,46 +411,109 @@ export default function Simulator({
 
           {/* RIGHT — projected leaderboard */}
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 bg-[#101828] px-3 py-2">
+            <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-[#101828] px-3 py-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-300">
                 Projected standings
               </p>
+              {comparing ? (
+                <span className="text-[10px] font-medium text-amber-300">
+                  Comparing {openList.length} · amber = differs
+                </span>
+              ) : (
+                <span className="text-[10px] font-medium text-slate-400">Tap a row for picks</span>
+              )}
             </div>
             <ul>
               {projected.map((r) => {
                 const liveRow = liveByPlayer.get(r.player.id);
                 const rankDelta = liveRow ? liveRow.rank - r.rank : 0; // + = moved up
                 const ptsDelta = liveRow ? r.score.total - liveRow.score.total : 0;
+                const open = openIds.has(r.player.id);
+                const picks = open ? livePicksFor(r.player.id) : [];
+                const matchPicks = picks.filter((p) =>
+                  ["sf", "champ", "runner", "bronze"].includes(p.key)
+                );
+                const awardPicks = picks.filter((p) => ["scorer", "mvp", "glove"].includes(p.key));
                 return (
-                  <li
-                    key={r.player.id}
-                    className={`flex items-center gap-3 border-b border-slate-100 px-3 py-2 last:border-0 ${
-                      meId === r.player.id ? "bg-[#e7eaf8]/70" : ""
-                    }`}
-                  >
-                    <span className="w-5 shrink-0 text-sm font-semibold text-slate-400">
-                      {r.rank}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[#101828]">
-                      {r.player.name}
-                    </span>
-                    <span className="shrink-0 text-right">
-                      {rankDelta > 0 ? (
-                        <span className="text-xs font-semibold text-emerald-600">▲{rankDelta}</span>
-                      ) : rankDelta < 0 ? (
-                        <span className="text-xs font-semibold text-rose-500">▼{-rankDelta}</span>
-                      ) : (
-                        <span className="text-xs text-slate-300">—</span>
-                      )}
-                    </span>
-                    <span className="w-14 shrink-0 text-right">
-                      <span className="text-base font-bold tabular-nums">{r.score.total}</span>
-                      {ptsDelta !== 0 && (
-                        <span className="block text-[10px] font-medium text-slate-400">
-                          {ptsDelta > 0 ? `+${ptsDelta}` : ptsDelta}
-                        </span>
-                      )}
-                    </span>
+                  <li key={r.player.id} className="border-b border-slate-100 last:border-0">
+                    <button
+                      onClick={() => toggleOpen(r.player.id)}
+                      className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-slate-50 ${
+                        meId === r.player.id ? "bg-[#e7eaf8]/70" : ""
+                      }`}
+                    >
+                      <span className="w-5 shrink-0 text-sm font-semibold text-slate-400">
+                        {r.rank}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[#101828]">
+                        {r.player.name}
+                      </span>
+                      <span className="shrink-0 text-right">
+                        {rankDelta > 0 ? (
+                          <span className="text-xs font-semibold text-emerald-600">
+                            ▲{rankDelta}
+                          </span>
+                        ) : rankDelta < 0 ? (
+                          <span className="text-xs font-semibold text-rose-500">▼{-rankDelta}</span>
+                        ) : (
+                          <span className="text-xs text-slate-300">—</span>
+                        )}
+                      </span>
+                      <span className="w-12 shrink-0 text-right">
+                        <span className="text-base font-bold tabular-nums">{r.score.total}</span>
+                        {ptsDelta !== 0 && (
+                          <span className="block text-[10px] font-medium text-slate-400">
+                            {ptsDelta > 0 ? `+${ptsDelta}` : ptsDelta}
+                          </span>
+                        )}
+                      </span>
+                      <svg
+                        className={`h-4 w-4 shrink-0 text-slate-300 transition-transform ${
+                          open ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {open && (
+                      <div className="border-t border-slate-100 bg-slate-50/70 px-3 py-2.5">
+                        <div className="mb-2 flex items-baseline justify-between">
+                          <span className="text-xs font-semibold text-slate-700">
+                            {r.rank}. {r.player.name}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {r.score.total} pts projected
+                          </span>
+                        </div>
+
+                        <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          Remaining matches
+                        </p>
+                        <div className="space-y-0.5">
+                          {matchPicks.map((lp) => (
+                            <PickLine key={lp.key} lp={lp} diff={diffKeys.has(lp.key)} />
+                          ))}
+                        </div>
+
+                        <p className="mb-0.5 mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          Awards
+                        </p>
+                        <div className="space-y-0.5">
+                          {awardPicks.map((lp) => (
+                            <PickLine key={lp.key} lp={lp} diff={diffKeys.has(lp.key)} />
+                          ))}
+                        </div>
+
+                        <p className="mt-2 text-[10px] text-slate-400">
+                          Group + earlier-round picks are already settled and don&apos;t change.
+                        </p>
+                      </div>
+                    )}
                   </li>
                 );
               })}
