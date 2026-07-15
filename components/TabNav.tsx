@@ -7,6 +7,7 @@ const TABS = [
   { href: "/", label: "Leaderboard" },
   { href: "/live", label: "Live Games" },
   { href: "/picks", label: "My Picks" },
+  { href: "/simulator", label: "Simulator" },
 ];
 
 export default function TabNav() {
