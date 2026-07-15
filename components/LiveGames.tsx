@@ -101,8 +101,8 @@ export default function LiveGames() {
     }
   }, [feed]);
 
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-  if (!feed) return <p className="text-sm text-slate-400">Loading games…</p>;
+  if (error) return <p className="text-sm text-red-300">{error}</p>;
+  if (!feed) return <p className="text-sm text-slate-200">Loading games…</p>;
   if (feed.fixtures.length === 0) {
     return (
       <p className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">

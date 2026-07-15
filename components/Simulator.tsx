@@ -208,8 +208,8 @@ export default function Simulator({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-bold">What-if Simulator</h2>
-        <p className="text-xs text-slate-500">
+        <h2 className="text-lg font-bold text-white">What-if Simulator</h2>
+        <p className="text-xs text-slate-200">
           Set hypothetical outcomes for the remaining games and awards — the projected standings
           update instantly. Nothing is saved; leaving this tab discards the scenario.
         </p>
@@ -345,7 +345,7 @@ export default function Simulator({
         </div>
       )}
 
-      <p className="text-center text-xs text-slate-400">
+      <p className="text-center text-xs text-slate-200">
         Rank movement (▲/▼) and point change are versus the current live standings. Only the champion,
         runner-up, bronze, reached-final bracket points and the three awards change with your inputs;
         everything else stays locked to actual results.

@@ -12,15 +12,17 @@ body {
 }
 
 /* Fixed background photo on its own layer behind everything. A gentle blur
-   softens the busy detail so it reads as a backdrop, and a light tint keeps
-   text legible. Tune: blur() = how busy, tint alpha (0.22) = how washed out. */
+   softens the busy detail, and a dark navy scrim gives a uniform backdrop so
+   light text sits on it with strong, consistent contrast (white content cards
+   keep their dark text). Tune: blur() = how busy, scrim alpha (0.6) = how dark;
+   lower it to let more of the photo show. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   background-image:
-    linear-gradient(rgba(231, 234, 248, 0.22), rgba(231, 234, 248, 0.22)),
+    linear-gradient(rgba(16, 24, 40, 0.6), rgba(16, 24, 40, 0.6)),
     url("/Background%20image%20webfile.webp");
   background-size: cover;
   background-position: center;

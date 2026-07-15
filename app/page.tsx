@@ -77,7 +77,7 @@ export default async function LeaderboardPage() {
         </div>
       )}
 
-      <p className="text-center text-xs text-slate-400">
+      <p className="text-center text-xs text-slate-200">
         Tap a name to see their full predictions. Group Stage points reflect the live standings, so they&apos;ll shift each matchday. Ties break on champion, then runner-up.
       </p>
 

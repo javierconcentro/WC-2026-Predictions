@@ -131,8 +131,8 @@ export default function PicksEditor({ playerName, teams, locked, lockAt, bracket
       {/* Header row */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold">Hi {playerName} 👋</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-lg font-bold text-white">Hi {playerName} 👋</h2>
+          <p className="text-xs text-slate-200">
             {locked
               ? "Picks are locked — Awards & Group Stage are final, and anything left blank scores 0. Joined late? You can still take part once the bracket opens."
               : `Everything saves automatically. Editable until ${new Date(lockAt).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.`}
@@ -275,7 +275,7 @@ export default function PicksEditor({ playerName, teams, locked, lockAt, bracket
           await fetch("/api/logout", { method: "POST" });
           location.reload();
         }}
-        className="text-xs text-slate-400 underline"
+        className="text-xs text-slate-300 underline hover:text-white"
       >
         Not {playerName}? Switch player
       </button>

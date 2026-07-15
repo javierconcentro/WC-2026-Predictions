@@ -27,7 +27,7 @@ export default function AdminUnlock() {
   if (!open) {
     return (
       <p className="pt-6 text-center">
-        <button onClick={() => setOpen(true)} className="text-xs text-slate-400 hover:text-slate-600">
+        <button onClick={() => setOpen(true)} className="text-xs text-slate-300 hover:text-white">
           Admin log in
         </button>
       </p>
