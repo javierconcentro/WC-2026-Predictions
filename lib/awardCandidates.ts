@@ -46,7 +46,6 @@ export const GLOVE_CANDIDATES: AwardCandidate[] = [
 // in. Match values are TEAM names (resolved against the live fixtures); award
 // values are player names (should appear in the lists above).
 export const SIMULATOR_DEFAULTS = {
-  semifinalWinner: "England", // England–Argentina semifinal
   finalWinner: "Spain", //       → champion Spain, runner-up the other finalist
   thirdPlaceWinner: "France", //  → bronze France, 4th the other third-place team
   topScorer: "Lionel Messi",

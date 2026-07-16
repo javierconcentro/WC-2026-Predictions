@@ -12,7 +12,6 @@ import type {
 } from "@/lib/types";
 import { scorePlayer, compareForLeaderboard, type ScoreBreakdown } from "@/lib/scoring";
 import { filterAutofilledPicks } from "@/lib/autofilled-picks";
-import { knockoutFixtureSlots } from "@/lib/bracket";
 import { flagUrl } from "@/lib/flags";
 import {
   SCORER_CANDIDATES,
@@ -67,24 +66,23 @@ export default function Simulator({
   const teamById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
   const nameOf = (id: number | null | undefined) => (id ? teamById.get(id)?.name ?? "TBD" : "TBD");
 
-  // Derive the remaining knockout state from the fixtures (not hard-coded): one
-  // semifinal is decided (its winner is a fixed finalist, its loser a fixed
-  // third-place team); the other semifinal's two teams are the open toggle.
-  const sf = fixtures.filter((f) => f.stage === "SF");
-  const decidedSF = sf.find((f) => f.status === "finished" && f.winner_team_id);
-  const openSF = sf.find((f) => f.status !== "finished" && f.home_team_id && f.away_team_id);
+  // Derive the remaining knockout state from the fixtures (not hard-coded): the
+  // semifinals are played, so the two finalists come from the Final fixture and
+  // the two third-place teams from the bronze fixture. Only those two matches
+  // (plus the awards) are still open.
   const finalFx = fixtures.find((f) => f.stage === "F");
   const bronzeFx = fixtures.find((f) => f.stage === "bronze");
-  const applicable = Boolean(decidedSF && openSF && finalFx && bronzeFx);
-
-  const fixedFinalist = (decidedSF?.winner_team_id ?? 0) as number; // e.g. Spain
-  const fixedThird = (decidedSF
-    ? decidedSF.home_team_id === fixedFinalist
-      ? decidedSF.away_team_id
-      : decidedSF.home_team_id
-    : 0) as number; // e.g. France
-  const eaA = (openSF?.home_team_id ?? 0) as number;
-  const eaB = (openSF?.away_team_id ?? 0) as number;
+  const finalists = [
+    (finalFx?.home_team_id ?? 0) as number,
+    (finalFx?.away_team_id ?? 0) as number,
+  ];
+  const thirdTeams = [
+    (bronzeFx?.home_team_id ?? 0) as number,
+    (bronzeFx?.away_team_id ?? 0) as number,
+  ];
+  const applicable = Boolean(
+    finalFx && bronzeFx && finalists[0] && finalists[1] && thirdTeams[0] && thirdTeams[1]
+  );
 
   const rankAll = (a: Actuals, fx: Fixture[], locked: boolean): Ranked[] => {
     const rows = players.map((player) => {
@@ -117,18 +115,13 @@ export default function Simulator({
   }, [live]);
 
   // --- Scenario inputs, pre-filled with the favorite outcomes from config ---
-  // Match defaults are team names resolved against the live fixtures (falling
-  // back to the derived side if a name doesn't match).
-  const defSemi = [eaA, eaB].find((id) => nameOf(id) === SIMULATOR_DEFAULTS.semifinalWinner) ?? eaA;
-  const defSemiLoser = defSemi === eaA ? eaB : eaA;
+  // Match defaults are team names resolved against the actual finalists / third-
+  // place teams (falling back to the first side if a name doesn't match).
   const defFinal =
-    [defSemi, fixedFinalist].find((id) => nameOf(id) === SIMULATOR_DEFAULTS.finalWinner) ??
-    fixedFinalist;
+    finalists.find((id) => nameOf(id) === SIMULATOR_DEFAULTS.finalWinner) ?? finalists[0];
   const defThird =
-    [defSemiLoser, fixedThird].find((id) => nameOf(id) === SIMULATOR_DEFAULTS.thirdPlaceWinner) ??
-    fixedThird;
+    thirdTeams.find((id) => nameOf(id) === SIMULATOR_DEFAULTS.thirdPlaceWinner) ?? thirdTeams[0];
 
-  const [eaWinner, setEaWinner] = useState<number>(defSemi);
   const [finalPick, setFinalPick] = useState<number>(defFinal);
   const [thirdPick, setThirdPick] = useState<number>(defThird);
   const [topScorer, setTopScorer] = useState<string>(SIMULATOR_DEFAULTS.topScorer);
@@ -146,17 +139,8 @@ export default function Simulator({
       return next;
     });
 
-  // The bracket slot of the open semifinal, so we can read each player's pick
-  // for it (their predicted England–Argentina winner).
-  const slotByFixture = useMemo(() => knockoutFixtureSlots(fixtures), [fixtures]);
-  const openSfSlot = openSF ? slotByFixture.get(openSF.id) ?? null : null;
-
-  const eaLoser = eaWinner === eaA ? eaB : eaA;
-  const finalists = [eaWinner, fixedFinalist];
-  const thirdTeams = [eaLoser, fixedThird];
-  // Keep the final/third picks valid as the semifinal toggle flips.
-  const finalWinner = finalists.includes(finalPick) ? finalPick : fixedFinalist;
-  const thirdWinner = thirdTeams.includes(thirdPick) ? thirdPick : fixedThird;
+  const finalWinner = finalists.includes(finalPick) ? finalPick : finalists[0];
+  const thirdWinner = thirdTeams.includes(thirdPick) ? thirdPick : thirdTeams[0];
   const runnerUp = finalists.find((t) => t !== finalWinner) ?? null;
 
   // The only picks the simulator can move: the three remaining matches and the
@@ -172,7 +156,6 @@ export default function Simulator({
 
   const livePicksFor = (playerId: string): LivePick[] => {
     const p1 = part1.find((x) => x.player_id === playerId) ?? null;
-    const sfPick = brackets.find((b) => b.player_id === playerId && b.slot === openSfSlot)?.picked_team_id ?? null;
     const brz = bronzes.find((b) => b.player_id === playerId)?.bronze_winner_team_id ?? null;
     const champ = p1?.champion_team_id ?? null;
     const runner = p1?.runnerup_team_id ?? null;
@@ -191,7 +174,6 @@ export default function Simulator({
       matches: boolean
     ): LivePick => ({ key, label, pts, kind: "text", text: value ?? "", matches, cmp: norm(value) || "∅" });
     return [
-      team("sf", "Semifinal", 12, sfPick, sfPick != null && sfPick === eaWinner),
       team("champ", "Champion", 25, champ, champ != null && champ === finalWinner),
       team("runner", "Runner-up", 15, runner, runner != null && runner === runnerUp),
       team("bronze", "Bronze", 10, brz, brz != null && brz === thirdWinner),
@@ -227,7 +209,6 @@ export default function Simulator({
       golden_glove_name: glove || null,
     };
     const hypoFixtures = fixtures.map((f) => {
-      if (f.id === openSF!.id) return { ...f, status: "finished" as const, winner_team_id: eaWinner };
       if (f.id === finalFx!.id)
         return { ...f, status: "finished" as const, winner_team_id: finalWinner };
       if (f.id === bronzeFx!.id)
@@ -236,7 +217,7 @@ export default function Simulator({
     });
     return rankAll(hypoActuals, hypoFixtures, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eaWinner, finalWinner, thirdWinner, runnerUp, topScorer, mvp, glove]);
+  }, [finalWinner, thirdWinner, runnerUp, topScorer, mvp, glove]);
 
   const Flag = ({ id }: { id: number | null }) => {
     if (!id) return null;
@@ -438,7 +419,7 @@ export default function Simulator({
 
       {!applicable ? (
         <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
-          The simulator becomes available once one semifinal is decided and the other is set.
+          The simulator becomes available once the finalists and third-place teams are set.
         </div>
       ) : (
         <>
@@ -447,13 +428,6 @@ export default function Simulator({
           <div className="space-y-4">
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
               <p className="text-sm font-semibold text-slate-700">Remaining matches</p>
-
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-slate-500">
-                  Semifinal · {nameOf(eaA)} vs {nameOf(eaB)}
-                </p>
-                <Toggle options={[eaA, eaB]} value={eaWinner} onChange={setEaWinner} />
-              </div>
 
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-slate-500">
@@ -527,7 +501,7 @@ export default function Simulator({
                 const showPanel = !compareMode && selected;
                 const picks = showPanel ? livePicksFor(r.player.id) : [];
                 const matchPicks = picks.filter((p) =>
-                  ["sf", "champ", "runner", "bronze"].includes(p.key)
+                  ["champ", "runner", "bronze"].includes(p.key)
                 );
                 const awardPicks = picks.filter((p) => ["scorer", "mvp", "glove"].includes(p.key));
                 return (
