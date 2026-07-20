@@ -11,6 +11,26 @@ body {
   background-color: var(--background);
 }
 
+/* Winner banner entrance (used by WinnerCelebration). translateX(-50%) keeps it
+   centered since the element is positioned with left-1/2. */
+@keyframes winner-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -14px) scale(0.85);
+  }
+  55% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+.winner-pop {
+  animation: winner-pop 0.6s ease-out both;
+}
+
 /* Fixed background photo on its own layer behind everything. A gentle blur
    softens the busy detail, and a dark navy scrim gives a uniform backdrop so
    light text sits on it with strong, consistent contrast (white content cards

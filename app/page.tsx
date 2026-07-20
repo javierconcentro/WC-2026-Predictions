@@ -5,6 +5,7 @@ import { getConfig, isAdmin, currentPlayer } from "@/lib/auth";
 import AdminPanel from "@/components/AdminPanel";
 import AdminUnlock from "@/components/AdminUnlock";
 import JoinGate from "@/components/JoinGate";
+import WinnerCelebration from "@/components/WinnerCelebration";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function LeaderboardPage() {
 
   return (
     <div className="space-y-4">
+      <WinnerCelebration winner="Liz" />
       {entries.length === 0 ? (
         <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
           Nobody has joined yet. Head to{" "}
