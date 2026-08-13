@@ -2,9 +2,25 @@
 
 Office World Cup 2026 prediction pool for ~10 colleagues. This doc hands off to a fresh Claude Code session.
 
+## ⚠️ Handover note (2026 tournament is over)
+The original author has left Concentro. The work GitHub account
+(`javierconcentro`), and possibly the Supabase and Vercel projects tied to that
+work identity, will go away. If you are the new owner:
+1. **Push this repo to your own GitHub** — it was delivered as a `.bundle` (full
+   history): `git clone wc2026-pool.bundle WC_2026_Pool`, then set your own
+   remote: `git remote set-url origin <your-repo-url>` and `git push -u origin main`.
+2. **Stand up your own backend** — create your own Supabase project and run
+   `supabase/schema.sql`, get your own free football-data.org key, and write your
+   own `.env.local` from `.env.example`. See `README.md`.
+3. **The pool data does NOT live in this repo** — players, picks, fixtures and
+   results are all rows in Supabase. If the original project is gone, the app
+   will start empty (a working app, no history). A SQL export is needed to keep
+   the 2026 results.
+4. **Rotate every secret** (see "Access / secrets" below).
+
 ## How to work on this
-- **Project root:** `C:\Users\JavierMarazuela\OneDrive - Concentro\Claude\WC_2026_Pool`
-- **Repo:** github.com/javierconcentro/WC-2026-Predictions (branch `main`)
+- **Project root:** `C:\Users\JavierMarazuela\OneDrive - Concentro\Claude\WC_2026_Pool` (original author's machine)
+- **Repo:** github.com/javierconcentro/WC-2026-Predictions (branch `main`) — **work account, being closed; move to a new remote**
 - **Deploy:** Vercel auto-deploys on push to `main` (~1 min). There is no local dev server in this workflow.
 - **Loop for every change:** edit → `npx tsc --noEmit` (and `npx next build` for anything non-trivial) → `git add -A && git commit && git push`. **You commit & push on the user's behalf** — they don't run an interactive terminal here. End commit messages with the `Co-Authored-By` trailer.
 - **DB access:** Supabase via REST with the service-role key in `.env.local` (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`). Config/data tweaks are done with `curl` PATCH/POST against the REST API. Read `.env.local` for the key — do not paste it into files or chat.
@@ -17,6 +33,7 @@ Next.js 15 App Router + TypeScript + Tailwind v4, Supabase (service-role key, se
 ## Access / secrets
 - **Join:** name only — the shared passcode was removed. `SHARED_PASSCODE` env is now unused.
 - **Admin:** passcode `javier-admin-2026` (`ADMIN_PASSCODE`). "Admin log in" link is at the bottom of the join screen; admin works without a player account. Admin panel (bottom of Leaderboard) has Sync, Load squads, manual result override, awards entry, and a config form (lock dates + payout) that pre-fills current values.
+  - ⚠️ **CHANGE THIS BEFORE ANY FUTURE RUN.** This passcode is written in cleartext in this doc and was only ever a low-stakes gate for a finished office pool. If you reuse this app for another tournament, set a new `ADMIN_PASSCODE` (and don't commit it here). Same goes for rotating `SUPABASE_SERVICE_ROLE_KEY`, `FOOTBALLDATA_KEY` and `CRON_SECRET` if this project changes hands.
 - Logo: `public/Concentro-Logo/concentro-logo_navy.png` in the header.
 
 ## Scoring (recomputed on read in `lib/scoring.ts`; total 318)
